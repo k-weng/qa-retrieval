@@ -18,7 +18,7 @@ def read_corpus(file):
     return corpus
 
 
-def read_annotations(file):
+def read_annotations(file, max_neg=20):
     data = []
     with open(file) as f:
         for line in f:
@@ -26,9 +26,11 @@ def read_annotations(file):
             pos = pos.split()
             neg = neg.split()
 
-            random.shuffle(neg)
+            if max_neg != -1:
+                random.shuffle(neg)
+                neg = neg[:max_neg]
 
-            ids = pos + neg[:20]
+            ids = pos + neg
 
             seen = set()
             pids = []
@@ -42,7 +44,7 @@ def read_annotations(file):
     return data
 
 
-def generate_batches(corpus_ids, data, batch_size, padding_id):
+def generate_train_batches(corpus_ids, data, batch_size, padding_id):
     perm = range(len(data))
     random.shuffle(perm)
 
@@ -78,7 +80,7 @@ def generate_batches(corpus_ids, data, batch_size, padding_id):
         sets.extend([[local_qid, id] + neg for id in pos])
 
         if batch_count == batch_size or i == n_qids:
-            batches.append(create_batch(titles, bodies, sets, padding_id))
+            batches.append(create_batch(titles, bodies, padding_id, sets=sets))
             batch_count = 0
             local_ids = {}
             titles, bodies, sets = [], [], []
@@ -86,16 +88,34 @@ def generate_batches(corpus_ids, data, batch_size, padding_id):
     return batches
 
 
-def create_batch(titles, bodies, sets, padding_id):
+def generate_eval_batches(corpus_ids, data, padding_id):
+    batches = []
+    for qid, pids, labels in data:
+        titles = []
+        bodies = []
+        for id in [qid] + pids:
+            title, body = corpus_ids[id]
+            titles.append(title)
+            bodies.append(body)
+        titles, bodies = create_batch(titles, bodies, padding_id)
+        batches.append((titles, bodies, np.array(labels)))
+    return batches
+
+
+def create_batch(titles, bodies, padding_id, sets=None):
     title_len = max(1, max(len(title) for title in titles))
     body_len = max(1, max(len(body) for body in bodies))
-    set_len = max(len(q_set) for q_set in sets)
     titles = np.column_stack([np.pad(title, (0, title_len - len(title)),
                               'constant', constant_values=padding_id)
                               for title in titles])
     bodies = np.column_stack([np.pad(body, (0, body_len - len(body)),
                               'constant', constant_values=padding_id)
                               for body in bodies])
-    sets = np.vstack([np.pad(q_set, (0, set_len - len(q_set)), 'edge')
-                      for q_set in sets])
-    return titles, bodies, sets
+
+    if sets:
+        set_len = max(len(q_set) for q_set in sets)
+        sets = np.vstack([np.pad(q_set, (0, set_len - len(q_set)), 'edge')
+                          for q_set in sets])
+        return titles, bodies, sets
+    else:
+        return titles, bodies

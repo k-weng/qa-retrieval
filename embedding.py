@@ -1,6 +1,5 @@
 import gzip
 import torch
-from torch.autograd import Variable
 import numpy as np
 
 
@@ -27,8 +26,6 @@ class Embedding:
         self.oov_id = vocab_ids[oov]
         self.words = words
         self.embed_size = embed_size
-        # self.embeddings = Variable(
-            # torch.from_numpy(np.array(vectors)).type(torch.FloatTensor))
         self.embeddings = np.array(vectors)
 
     def words_to_ids(self, words):
