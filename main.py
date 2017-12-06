@@ -18,7 +18,7 @@ parser.add_argument('--lr', '-lr', type=float, default=0.001)
 parser.add_argument('--batch_size', '-b', type=int, default=40)
 parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', '-e', type=int, default=50)
-parser.add_argument('--margin', '-m', type=float, default=0.5)
+parser.add_argument('--margin', '-m', type=float, default=0.2)
 parser.add_argument('--resume', '-r', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--test', action='store_true')
@@ -61,16 +61,17 @@ def main():
     criterion = nn.MultiMarginLoss(margin=margin)
     print 'Model created.'
 
-    if os.path.isfile(args.resume):
-        print 'Loading checkpoint.'
-        checkpoint = torch.load(args.resume)
-        args.start_epoch = checkpoint['epoch']
-        best_mrr = checkpoint['best_mrr']
-        model.load_state_dict(checkpoint['state_dict'])
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print 'Loading checkpoint.'
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            best_mrr = checkpoint['best_mrr']
+            model.load_state_dict(checkpoint['state_dict'])
 
-        print 'Loaded checkpoint at epoch {}.'.format(checkpoint['epoch'])
-    else:
-        print 'No checkpoint found here.'
+            print 'Loaded checkpoint at epoch {}.'.format(checkpoint['epoch'])
+        else:
+            print 'No checkpoint found here.'
 
     if args.cuda:
         model = model.cuda()
