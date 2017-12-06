@@ -30,7 +30,7 @@ def read_annotations(file, max_neg=20):
                 random.shuffle(neg)
                 neg = neg[:max_neg]
 
-            ids = pos + neg
+            ids = neg + pos
 
             seen = set()
             pids = []
