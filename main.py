@@ -18,12 +18,9 @@ parser.add_argument('--lr', '-lr', type=float, default=0.001)
 parser.add_argument('--batch_size', '-b', type=int, default=40)
 parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', '-e', type=int, default=50)
-parser.add_argument('--save', '-s', type=str, default='')
 parser.add_argument('--margin', '-m', type=float, default=0.5)
 parser.add_argument('--resume', '-r', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
-parser.add_argument('--save_model', action='store_true')
-parser.add_argument('--resume', type=str, default='')
 
 best_mrr = -1
 
