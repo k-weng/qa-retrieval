@@ -19,7 +19,7 @@ parser.add_argument('--batch_size', '-b', type=int, default=40)
 parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', '-e', type=int, default=50)
 parser.add_argument('--margin', '-m', type=float, default=0.2)
-parser.add_argument('--resume', '-r', type=str, default='')
+parser.add_argument('--load', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--test', action='store_true')
 
@@ -61,10 +61,10 @@ def main():
     criterion = nn.MultiMarginLoss(margin=margin)
     print 'Model created.'
 
-    if args.resume:
-        if os.path.isfile(args.resume):
+    if args.load:
+        if os.path.isfile(args.load):
             print 'Loading checkpoint.'
-            checkpoint = torch.load(args.resume)
+            checkpoint = torch.load(args.load)
             args.start_epoch = checkpoint['epoch']
             best_mrr = checkpoint['best_mrr']
             model.load_state_dict(checkpoint['state_dict'])
@@ -76,6 +76,15 @@ def main():
     if args.cuda:
         model = model.cuda()
         criterion = criterion.cuda()
+
+    if args.test:
+        test_file = 'askubuntu/test.txt'
+        test_data = preprocessing.read_annotations(test_file, max_neg=-1)
+        test_batches = preprocessing.generate_eval_batches(
+            corpus_ids, test_data, padding_id)
+
+        evaluate(model, embedding, test_batches, padding_id)
+        return
 
     for epoch in xrange(args.start_epoch, epochs):
         train_batches = preprocessing.generate_train_batches(
