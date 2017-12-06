@@ -19,7 +19,7 @@ parser.add_argument('--save', '-s', type=str, default='')
 parser.add_argument('--margin', '-m', type=float, default=0.5)
 parser.add_argument('--resume', '-r', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
-parser.add_argument('--save', action='store_true')
+parser.add_argument('--save_model', action='store_true')
 
 
 def main():
