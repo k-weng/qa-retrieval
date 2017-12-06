@@ -66,9 +66,8 @@ def main(args):
             n_pairs, sample_size = set_ids.shape
 
             # hidden = questions x hidden
-            hidden = forward(lstm, embedding,
-                             title_ids, body_ids, padding_id,
-                             embed_size, hidden_size)
+            hidden = forward(args, lstm, embedding,
+                             title_ids, body_ids, padding_id)
 
             # questions = pairs x sample (= 22) x hidden (= 200)
             questions = hidden[set_ids.ravel()]
