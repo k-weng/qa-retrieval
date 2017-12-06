@@ -99,7 +99,7 @@ def main():
             scores = F.cosine_similarity(q, p, dim=2)
             target = Variable(torch.zeros(n_pairs).type(torch.LongTensor))
 
-            if args.target:
+            if args.cuda:
                 target = target.cuda()
 
             loss = criterion(scores, target)
