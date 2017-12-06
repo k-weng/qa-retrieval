@@ -103,7 +103,9 @@ def main():
                 target = target.cuda()
 
             loss = criterion(scores, target)
-            total_loss += loss.data.numpy()[0]
+
+            loss_val = loss.cpu().data.numpy()[0]
+            total_loss += loss_val
 
             loss.backward()
             optimizer.step()
@@ -111,7 +113,7 @@ def main():
             print ('Epoch: {0}/{1}, Batch {2}/{3}, Time: {4}, ' +
                    'Loss: {5}, Average Loss: {6}').format(
                 epoch + 1, epochs, i + 1, len(batches), time.time() - start,
-                loss.data.numpy()[0], total_loss / (i + 1))
+                loss_val, total_loss / (i + 1))
 
         if args.dev:
             print "Evaluating."
@@ -137,7 +139,7 @@ def evaluate(lstm, embedding, batches, padding_id):
         q = hidden[0].unsqueeze(0)
         p = hidden[1:]
 
-        scores = F.cosine_similarity(q, p, dim=1).data.numpy()
+        scores = F.cosine_similarity(q, p, dim=1).cpu().data.numpy()
         assert len(scores) == len(labels)
 
         ranking = (-1 * scores).argsort()
