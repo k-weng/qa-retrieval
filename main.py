@@ -6,7 +6,9 @@ import torch.nn.functional as F
 import torch
 import time
 import sys
+import os
 import argparse
+import shutil
 from metrics import Metrics
 
 parser = argparse.ArgumentParser(sys.argv[0])
@@ -14,16 +16,20 @@ parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--embed', type=int, default=200)
 parser.add_argument('--lr', '-lr', type=float, default=0.001)
 parser.add_argument('--batch_size', '-b', type=int, default=40)
+parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', '-e', type=int, default=50)
 parser.add_argument('--save', '-s', type=str, default='')
 parser.add_argument('--margin', '-m', type=float, default=0.5)
 parser.add_argument('--resume', '-r', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--save_model', action='store_true')
+parser.add_argument('--resume', type=str, default='')
+
+best_mrr = -1
 
 
 def main():
-    global args
+    global args, best_mrr
     args = parser.parse_args()
 
     embed_size = args.embed
@@ -52,30 +58,50 @@ def main():
     dev_batches = preprocessing.generate_eval_batches(
         corpus_ids, dev_data, padding_id)
 
-    lstm = nn.LSTM(embedding.embed_size, hidden_size)
-    optimizer = torch.optim.Adam(lstm.parameters(), lr)
+    model = nn.LSTM(embedding.embed_size, hidden_size)
+    optimizer = torch.optim.Adam(model.parameters(), lr)
     criterion = nn.MultiMarginLoss(margin=margin)
     print 'Model created.'
 
+    if os.path.isfile(args.resume):
+        print 'Loading checkpoint.'
+        checkpoint = torch.load(args.resume)
+        args.start_epoch = checkpoint['epoch']
+        best_mrr = checkpoint['best_mrr']
+        model.load_state_dict(checkpoint['state_dict'])
+
+        print 'Loaded checkpoint at epoch {}'.format(checkpoint['epoch'])
+    else:
+        print 'No checkpoint found here.'
+
     if args.cuda:
-        lstm = lstm.cuda()
+        model = model.cuda()
         criterion = criterion.cuda()
 
-    for epoch in xrange(epochs):
+    for epoch in xrange(args.start_epoch, epochs):
         train_batches = preprocessing.generate_train_batches(
             corpus_ids, train_data, batch_size, padding_id)
 
-        train(lstm, embedding, optimizer, criterion,
+        train(model, embedding, optimizer, criterion,
               train_batches, padding_id, epoch)
 
         map, mrr, p1, p5 = evaluate(
-            lstm, embedding, dev_batches, padding_id)
+            model, embedding, dev_batches, padding_id)
+
+        is_best = mrr > best_mrr
+        best_mrr = max(mrr, best_mrr)
+        save({
+            'epoch': epoch + 1,
+            'arch': 'lstm',
+            'state_dict': model.state_dict(),
+            'best_mrr': best_mrr,
+        }, is_best, args.hidden)
 
 
-def train(lstm, embedding, optimizer, criterion, batches, padding_id, epoch):
+def train(model, embedding, optimizer, criterion, batches, padding_id, epoch):
     total_loss = 0.0
 
-    lstm.train()
+    model.train()
 
     for i, batch in enumerate(batches):
         start = time.time()
@@ -88,12 +114,12 @@ def train(lstm, embedding, optimizer, criterion, batches, padding_id, epoch):
         n_pairs, sample_size = set_ids.shape
 
         # hidden = questions x hidden
-        hidden = forward(lstm, embedding,
+        hidden = forward(model, embedding,
                          title_ids, body_ids, padding_id)
 
         # questions = pairs x sample (= 22) x hidden (= 200)
         questions = hidden[set_ids.ravel()]
-        questions = questions.view(n_pairs, sample_size, args.hidden_size)
+        questions = questions.view(n_pairs, sample_size, args.hidden)
 
         # q = pairs x 1 x hidden (= 200)
         # p = pairs x sample - 1 (= 21) x hidden (= 200)
@@ -123,8 +149,8 @@ def train(lstm, embedding, optimizer, criterion, batches, padding_id, epoch):
             loss_val, total_loss / (i + 1))
 
 
-def evaluate(lstm, embedding, batches, padding_id):
-    lstm.eval()
+def evaluate(model, embedding, batches, padding_id):
+    model.eval()
     results = []
     for i, batch in enumerate(batches):
         # title_ids = title x questions (= 21)
@@ -133,7 +159,7 @@ def evaluate(lstm, embedding, batches, padding_id):
         title_ids, body_ids, labels = batch
 
         # hidden = questions (= 21) x hidden (= 200)
-        hidden = forward(lstm, embedding,
+        hidden = forward(model, embedding,
                          title_ids, body_ids, padding_id)
 
         # q = 1 x hidden (= 200)
@@ -160,7 +186,7 @@ def evaluate(lstm, embedding, batches, padding_id):
     return map, mrr, p1, p5
 
 
-def forward(lstm, embedding, title_ids, body_ids, padding_id):
+def forward(model, embedding, title_ids, body_ids, padding_id):
     embed_size = args.embed
     hidden_size = args.hidden
 
@@ -205,12 +231,12 @@ def forward(lstm, embedding, title_ids, body_ids, padding_id):
 
     # h_t = title x questions x hidden (= 200)
     for j in xrange(title_len):
-        _, h_c_t = lstm(x_t[j].view(1, n_questions, -1), h_c_t)
+        _, h_c_t = model(x_t[j].view(1, n_questions, -1), h_c_t)
         h_t[j, :, :] = h_c_t[0]
 
     # h_b = body (= 100) x questions x hidden (= 200)
     for j in xrange(body_len):
-        _, h_c_b = lstm(x_b[j].view(1, n_questions, -1), h_c_b)
+        _, h_c_b = model(x_b[j].view(1, n_questions, -1), h_c_b)
         h_b[j, :, :] = h_c_b[0]
 
     # h_t = title x questions x hidden (= 200)
@@ -252,8 +278,12 @@ def average(hidden, ids, padding_id, eps=1e-8):
     return masked_sum / (lengths + eps)
 
 
-def save(model, state, is_best, hidden):
-    pass
+def save(state, is_best, hidden):
+    latest = 'lstm_{0}_latest.pth.tar'.format(hidden)
+    torch.save(state, latest)
+    if is_best:
+        best = 'lstm_{0}_best.pth.tar'.format(hidden)
+        shutil.copyfile(latest, best)
 
 
 if __name__ == '__main__':
