@@ -117,8 +117,7 @@ def main():
 
         if args.dev:
             print "Evaluating."
-            evaluate(lstm, embedding, dev_batches, padding_id,
-                     embed_size, hidden_size)
+            evaluate(lstm, embedding, dev_batches, padding_id)
 
 
 def evaluate(lstm, embedding, batches, padding_id):
