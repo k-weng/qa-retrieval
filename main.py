@@ -21,7 +21,7 @@ parser.add_argument('--epochs', '-e', type=int, default=50)
 parser.add_argument('--margin', '-m', type=float, default=0.2)
 parser.add_argument('--load', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
-parser.add_argument('--test', action='store_true')
+parser.add_argument('--eval', action='store_true')
 
 best_mrr = -1
 
@@ -77,12 +77,16 @@ def main():
         model = model.cuda()
         criterion = criterion.cuda()
 
-    if args.test:
+    if args.eval:
         test_file = 'askubuntu/test.txt'
         test_data = preprocessing.read_annotations(test_file, max_neg=-1)
         test_batches = preprocessing.generate_eval_batches(
             corpus_ids, test_data, padding_id)
 
+        print 'Evaluating on dev set.'
+        evaluate(model, embedding, dev_batches, padding_id)
+
+        print 'Evaluating on test set.'
         evaluate(model, embedding, test_batches, padding_id)
         return
 
