@@ -116,8 +116,10 @@ def main():
                 loss_val, total_loss / (i + 1))
 
         if args.dev:
-            print "Evaluating."
-            evaluate(lstm, embedding, dev_batches, padding_id)
+            map, mrr, p1, p5 = evaluate(
+                lstm, embedding, dev_batches, padding_id)
+            print 'MAP: {0}, MRR: {1}, P@1: {2}, P@5: {3}'.format(
+                map, mrr, p1, p5)
 
 
 def evaluate(lstm, embedding, batches, padding_id):
