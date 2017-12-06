@@ -18,8 +18,8 @@ parser.add_argument('--epochs', '-e', type=int, default=50)
 parser.add_argument('--save', '-s', type=str, default='')
 parser.add_argument('--margin', '-m', type=float, default=0.5)
 parser.add_argument('--resume', '-r', type=str, default='')
-parser.add_argument('--dev', action='store_true')
 parser.add_argument('--cuda', action='store_true')
+parser.add_argument('--save', action='store_true')
 
 
 def main():
@@ -47,79 +47,80 @@ def main():
     train_file = 'askubuntu/train_random.txt'
     train = preprocessing.read_annotations(train_file)
 
-    if args.dev:
-        dev_file = 'askubuntu/dev.txt'
-        dev = preprocessing.read_annotations(dev_file, max_neg=-1)
-        dev_batches = preprocessing.generate_eval_batches(
-            corpus_ids, dev, padding_id)
+    dev_file = 'askubuntu/dev.txt'
+    dev = preprocessing.read_annotations(dev_file, max_neg=-1)
+    dev_batches = preprocessing.generate_eval_batches(
+        corpus_ids, dev, padding_id)
 
     lstm = nn.LSTM(embedding.embed_size, hidden_size)
     optimizer = torch.optim.Adam(lstm.parameters(), lr)
     criterion = nn.MultiMarginLoss(margin=margin)
+    print 'Model created.'
 
     if args.cuda:
         lstm = lstm.cuda()
         criterion = criterion.cuda()
 
-    print 'Model created.'
-
     for epoch in xrange(epochs):
-        batches = preprocessing.generate_train_batches(
+        train_batches = preprocessing.generate_train_batches(
             corpus_ids, train, batch_size, padding_id)
-        total_loss = 0.0
 
-        lstm.train()
+        train(lstm, embedding, optimizer, criterion,
+              train_batches, padding_id, epoch)
 
-        for i, batch in enumerate(batches):
-            start = time.time()
-            optimizer.zero_grad()
+        map, mrr, p1, p5 = evaluate(
+            lstm, embedding, dev_batches, padding_id)
 
-            # title_ids = title x questions
-            # body_ids = body (= 100) x questions
-            # set_ids = pairs x sample (= 22)
-            title_ids, body_ids, set_ids = batch
-            n_pairs, sample_size = set_ids.shape
 
-            # hidden = questions x hidden
-            hidden = forward(lstm, embedding,
-                             title_ids, body_ids, padding_id)
+def train(lstm, embedding, optimizer, criterion, batches, padding_id, epoch):
+    total_loss = 0.0
 
-            # questions = pairs x sample (= 22) x hidden (= 200)
-            questions = hidden[set_ids.ravel()]
-            questions = questions.view(n_pairs, sample_size, hidden_size)
+    lstm.train()
 
-            # q = pairs x 1 x hidden (= 200)
-            # p = pairs x sample - 1 (= 21) x hidden (= 200)
-            q = questions[:, 0, :].unsqueeze(1)
-            p = questions[:, 1:, :]
+    for i, batch in enumerate(batches):
+        start = time.time()
+        optimizer.zero_grad()
 
-            # scores = pairs x sample - 1 (= 21)
-            # target = pairs
-            # scores = scoring(q, p)
-            scores = F.cosine_similarity(q, p, dim=2)
-            target = Variable(torch.zeros(n_pairs).type(torch.LongTensor))
+        # title_ids = title x questions
+        # body_ids = body (= 100) x questions
+        # set_ids = pairs x sample (= 22)
+        title_ids, body_ids, set_ids = batch
+        n_pairs, sample_size = set_ids.shape
 
-            if args.cuda:
-                target = target.cuda()
+        # hidden = questions x hidden
+        hidden = forward(lstm, embedding,
+                         title_ids, body_ids, padding_id)
 
-            loss = criterion(scores, target)
+        # questions = pairs x sample (= 22) x hidden (= 200)
+        questions = hidden[set_ids.ravel()]
+        questions = questions.view(n_pairs, sample_size, args.hidden_size)
 
-            loss_val = loss.cpu().data.numpy()[0]
-            total_loss += loss_val
+        # q = pairs x 1 x hidden (= 200)
+        # p = pairs x sample - 1 (= 21) x hidden (= 200)
+        q = questions[:, 0, :].unsqueeze(1)
+        p = questions[:, 1:, :]
 
-            loss.backward()
-            optimizer.step()
+        # scores = pairs x sample - 1 (= 21)
+        # target = pairs
+        # scores = scoring(q, p)
+        scores = F.cosine_similarity(q, p, dim=2)
+        target = Variable(torch.zeros(n_pairs).type(torch.LongTensor))
 
-            print ('Epoch: {0}/{1}, Batch {2}/{3}, Time: {4}, ' +
-                   'Loss: {5}, Average Loss: {6}').format(
-                epoch + 1, epochs, i + 1, len(batches), time.time() - start,
-                loss_val, total_loss / (i + 1))
+        if args.cuda:
+            target = target.cuda()
 
-        if args.dev:
-            map, mrr, p1, p5 = evaluate(
-                lstm, embedding, dev_batches, padding_id)
-            print 'MAP: {0}, MRR: {1}, P@1: {2}, P@5: {3}'.format(
-                map, mrr, p1, p5)
+        loss = criterion(scores, target)
+
+        loss_val = loss.cpu().data.numpy()[0]
+        total_loss += loss_val
+
+        loss.backward()
+        optimizer.step()
+
+        print ('Epoch: {0}/{1}, Batch {2}/{3}, Time: {4}, ' +
+               'Loss: {5}, Average Loss: {6}').format(
+            epoch + 1, args.epochs, i + 1, len(batches), time.time() - start,
+            loss_val, total_loss / (i + 1))
 
 
 def evaluate(lstm, embedding, batches, padding_id):
@@ -152,6 +153,9 @@ def evaluate(lstm, embedding, batches, padding_id):
     mrr = metrics.mrr() * 100
     p1 = metrics.precision(1) * 100
     p5 = metrics.precision(5) * 100
+
+    print 'MAP: {0}, MRR: {1}, P@1: {2}, P@5: {3}'.format(
+        map, mrr, p1, p5)
 
     return map, mrr, p1, p5
 
@@ -248,7 +252,7 @@ def average(hidden, ids, padding_id, eps=1e-8):
     return masked_sum / (lengths + eps)
 
 
-def save(state, is_best, hidden):
+def save(model, state, is_best, hidden):
     pass
 
 
