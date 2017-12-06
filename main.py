@@ -21,6 +21,7 @@ parser.add_argument('--epochs', '-e', type=int, default=50)
 parser.add_argument('--margin', '-m', type=float, default=0.5)
 parser.add_argument('--resume', '-r', type=str, default='')
 parser.add_argument('--cuda', action='store_true')
+parser.add_argument('--test', action='store_true')
 
 best_mrr = -1
 
@@ -67,7 +68,7 @@ def main():
         best_mrr = checkpoint['best_mrr']
         model.load_state_dict(checkpoint['state_dict'])
 
-        print 'Loaded checkpoint at epoch {}'.format(checkpoint['epoch'])
+        print 'Loaded checkpoint at epoch {}.'.format(checkpoint['epoch'])
     else:
         print 'No checkpoint found here.'
 
@@ -140,8 +141,8 @@ def train(model, embedding, optimizer, criterion, batches, padding_id, epoch):
         loss.backward()
         optimizer.step()
 
-        print ('Epoch: {0}/{1}, Batch {2}/{3}, Time: {4}, ' +
-               'Loss: {5}, Average Loss: {6}').format(
+        print ('Epoch: {}/{}, Batch {}/{}, Time: {}, ' +
+               'Loss: {}, Average Loss: {}').format(
             epoch + 1, args.epochs, i + 1, len(batches), time.time() - start,
             loss_val, total_loss / (i + 1))
 
@@ -177,7 +178,7 @@ def evaluate(model, embedding, batches, padding_id):
     p1 = metrics.precision(1) * 100
     p5 = metrics.precision(5) * 100
 
-    print 'MAP: {0}, MRR: {1}, P@1: {2}, P@5: {3}'.format(
+    print 'MAP: {}, MRR: {}, P@1: {}, P@5: {}'.format(
         map, mrr, p1, p5)
 
     return map, mrr, p1, p5
@@ -276,10 +277,10 @@ def average(hidden, ids, padding_id, eps=1e-8):
 
 
 def save(state, is_best, hidden):
-    latest = 'lstm_{0}_latest.pth.tar'.format(hidden)
+    latest = 'lstm_{}_latest.pth.tar'.format(hidden)
     torch.save(state, latest)
     if is_best:
-        best = 'lstm_{0}_best.pth.tar'.format(hidden)
+        best = 'lstm_{}_best.pth.tar'.format(hidden)
         shutil.copyfile(latest, best)
 
 
