@@ -9,8 +9,23 @@ import sys
 import argparse
 from metrics import Metrics
 
+parser = argparse.ArgumentParser(sys.argv[0])
+parser.add_argument('--hidden', type=int, default=200)
+parser.add_argument('--embed', type=int, default=200)
+parser.add_argument('--lr', '-lr', type=float, default=0.001)
+parser.add_argument('--batch_size', '-b', type=int, default=40)
+parser.add_argument('--epochs', '-e', type=int, default=50)
+parser.add_argument('--save', '-s', type=str, default='')
+parser.add_argument('--margin', '-m', type=float, default=0.5)
+parser.add_argument('--resume', '-r', type=str, default='')
+parser.add_argument('--dev', action='store_true')
+parser.add_argument('--cuda', action='store_true')
 
-def main(args):
+
+def main():
+    global args
+    args = parser.parse_args()
+
     embed_size = args.embed
     hidden_size = args.hidden
     batch_size = args.batch_size
@@ -66,7 +81,7 @@ def main(args):
             n_pairs, sample_size = set_ids.shape
 
             # hidden = questions x hidden
-            hidden = forward(args, lstm, embedding,
+            hidden = forward(lstm, embedding,
                              title_ids, body_ids, padding_id)
 
             # questions = pairs x sample (= 22) x hidden (= 200)
@@ -83,6 +98,10 @@ def main(args):
             # scores = scoring(q, p)
             scores = F.cosine_similarity(q, p, dim=2)
             target = Variable(torch.zeros(n_pairs).type(torch.LongTensor))
+
+            if args.target:
+                target = target.cuda()
+
             loss = criterion(scores, target)
             total_loss += loss.data.numpy()[0]
 
@@ -100,10 +119,7 @@ def main(args):
                      embed_size, hidden_size)
 
 
-def evaluate(args, lstm, embedding, batches, padding_id):
-    embed_size = args.embed
-    hidden_size = args.hidden
-
+def evaluate(lstm, embedding, batches, padding_id):
     lstm.eval()
     results = []
     for i, batch in enumerate(batches):
@@ -114,8 +130,7 @@ def evaluate(args, lstm, embedding, batches, padding_id):
 
         # hidden = questions (= 21) x hidden (= 200)
         hidden = forward(lstm, embedding,
-                         title_ids, body_ids, padding_id,
-                         embed_size, hidden_size)
+                         title_ids, body_ids, padding_id)
 
         # q = 1 x hidden (= 200)
         # p = questions - query (= 20) x hidden (= 200)
@@ -138,7 +153,7 @@ def evaluate(args, lstm, embedding, batches, padding_id):
     return map, mrr, p1, p5
 
 
-def forward(args, lstm, embedding, title_ids, body_ids, padding_id):
+def forward(lstm, embedding, title_ids, body_ids, padding_id):
     embed_size = args.embed
     hidden_size = args.hidden
 
@@ -156,12 +171,12 @@ def forward(args, lstm, embedding, title_ids, body_ids, padding_id):
     x_b = torch.from_numpy(x_b).type(torch.FloatTensor)
     x_b = x_b.view(body_len, n_questions, embed_size)
 
+    x_t = Variable(x_t)
+    x_b = Variable(x_b)
+
     if args.cuda:
         x_t = x_t.cuda()
         x_b = x_b.cuda()
-
-    x_t = Variable(x_t)
-    x_b = Variable(x_b)
 
     # h_c_t[0] = 1 x questions x hidden (= 200)
     # h_c_b[0] = 1 x questions x hidden (= 200)
@@ -174,6 +189,12 @@ def forward(args, lstm, embedding, title_ids, body_ids, padding_id):
     # h_b = body x questions x hidden (= 200)
     h_t = Variable(torch.zeros(title_len, n_questions, hidden_size))
     h_b = Variable(torch.zeros(body_len, n_questions, hidden_size))
+
+    if args.cuda:
+        h_c_t = (h_c_t[0].cuda(), h_c_t[1].cuda())
+        h_c_b = (h_c_b[0].cuda(), h_c_b[1].cuda())
+        h_t = h_t.cuda()
+        h_b = h_b.cuda()
 
     # h_t = title x questions x hidden (= 200)
     for j in xrange(title_len):
@@ -212,6 +233,9 @@ def average(hidden, ids, padding_id, eps=1e-8):
     mask = Variable(torch.from_numpy(1 * (ids != padding_id))
                     .type(torch.FloatTensor).unsqueeze(2))
 
+    if args.cuda:
+        mask = mask.cuda()
+
     # masked_sum = questions x hidden (= 200)
     masked_sum = torch.sum(mask * hidden, dim=0)
 
@@ -226,16 +250,4 @@ def save(state, is_best, hidden):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(sys.argv[0])
-    parser.add_argument('--hidden', type=int, default=200)
-    parser.add_argument('--embed', type=int, default=200)
-    parser.add_argument('--lr', '-lr', type=float, default=0.001)
-    parser.add_argument('--batch_size', '-b', type=int, default=40)
-    parser.add_argument('--epochs', '-e', type=int, default=50)
-    parser.add_argument('--save', '-s', type=str, default='')
-    parser.add_argument('--margin', '-m', type=float, default=0.5)
-    parser.add_argument('--resume', '-r', type=str, default='')
-    parser.add_argument('--dev', action='store_true')
-    parser.add_argument('--cuda', action='store_true')
-
-    main(parser.parse_args())
+    main()
