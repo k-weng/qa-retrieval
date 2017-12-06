@@ -20,9 +20,11 @@ def main(args):
 
     corpus_file = 'askubuntu/text_tokenized.txt.gz'
     corpus = preprocessing.read_corpus(corpus_file)
+    print 'Corpus processed.'
 
     embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
     embedding = Embedding(embed_size, embedding_file)
+    print 'Embeddings loaded.'
 
     corpus_ids = embedding.corpus_to_ids(corpus)
     padding_id = embedding.vocab_ids['<padding>']
@@ -94,6 +96,7 @@ def main(args):
                 loss.data.numpy()[0], total_loss / (i + 1))
 
         if args.dev:
+            print "Evaluating."
             evaluate(lstm, embedding, dev_batches, padding_id,
                      embed_size, hidden_size)
 
