@@ -45,12 +45,12 @@ def main():
     padding_id = embedding.vocab_ids['<padding>']
 
     train_file = 'askubuntu/train_random.txt'
-    train = preprocessing.read_annotations(train_file)
+    train_data = preprocessing.read_annotations(train_file)
 
     dev_file = 'askubuntu/dev.txt'
-    dev = preprocessing.read_annotations(dev_file, max_neg=-1)
+    dev_data = preprocessing.read_annotations(dev_file, max_neg=-1)
     dev_batches = preprocessing.generate_eval_batches(
-        corpus_ids, dev, padding_id)
+        corpus_ids, dev_data, padding_id)
 
     lstm = nn.LSTM(embedding.embed_size, hidden_size)
     optimizer = torch.optim.Adam(lstm.parameters(), lr)
@@ -63,7 +63,7 @@ def main():
 
     for epoch in xrange(epochs):
         train_batches = preprocessing.generate_train_batches(
-            corpus_ids, train, batch_size, padding_id)
+            corpus_ids, train_data, batch_size, padding_id)
 
         train(lstm, embedding, optimizer, criterion,
               train_batches, padding_id, epoch)
