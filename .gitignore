@@ -1,5 +1,7 @@
 env
 *.sublime*
 askubuntu
+android
 *.pyc
 *.pem
+models/

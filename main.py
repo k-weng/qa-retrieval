@@ -1,27 +1,32 @@
-import preprocessing
-from embedding import Embedding
-from torch.autograd import Variable
+import os
+import sys
+import time
+import shutil
+import argparse
+import batch_utils
+import numpy as np
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
-import time
-import sys
-import os
-import argparse
-import shutil
+from torch.autograd import Variable
+
+from datasets import UbuntuDataset
+from models import CNN, LSTM, Embedding
 from metrics import Metrics
 
 parser = argparse.ArgumentParser(sys.argv[0])
-parser.add_argument('--hidden', type=int, default=200)
+parser.add_argument('--batch_size', type=int, default=40)
 parser.add_argument('--embed', type=int, default=200)
-parser.add_argument('--lr', '-lr', type=float, default=0.001)
-parser.add_argument('--batch_size', '-b', type=int, default=40)
+parser.add_argument('--hidden', type=int, default=200)
+parser.add_argument('--margin', type=float, default=0.2)
+parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--start_epoch', type=int, default=0)
-parser.add_argument('--epochs', '-e', type=int, default=50)
-parser.add_argument('--margin', '-m', type=float, default=0.2)
+parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--load', type=str, default='')
-parser.add_argument('--cuda', action='store_true')
+parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--eval', action='store_true')
+parser.add_argument('--cuda', action='store_true')
 
 best_mrr = -1
 
@@ -29,37 +34,40 @@ best_mrr = -1
 def main():
     global args, best_mrr
     args = parser.parse_args()
-
-    embed_size = args.embed
-    hidden_size = args.hidden
-    batch_size = args.batch_size
-    lr = args.lr
-    epochs = args.epochs
-    margin = args.margin
+    print args
 
     corpus_file = 'askubuntu/text_tokenized.txt.gz'
-    corpus = preprocessing.read_corpus(corpus_file)
-    print 'Corpus processed.'
+    dataset = UbuntuDataset(corpus_file)
+    corpus = dataset.get_corpus()
 
     embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
-    embedding = Embedding(embed_size, embedding_file)
+    embedding = Embedding(args.embed, embedding_file)
     print 'Embeddings loaded.'
 
     corpus_ids = embedding.corpus_to_ids(corpus)
     padding_id = embedding.vocab_ids['<padding>']
 
     train_file = 'askubuntu/train_random.txt'
-    train_data = preprocessing.read_annotations(train_file)
+    train_data = dataset.read_annotations(train_file)
 
     dev_file = 'askubuntu/dev.txt'
-    dev_data = preprocessing.read_annotations(dev_file, max_neg=-1)
-    dev_batches = preprocessing.generate_eval_batches(
+    dev_data = dataset.read_annotations(dev_file, max_neg=-1)
+    dev_batches = batch_utils.generate_eval_batches(
         corpus_ids, dev_data, padding_id)
 
-    model = nn.LSTM(embedding.embed_size, hidden_size)
-    optimizer = torch.optim.Adam(model.parameters(), lr)
-    criterion = nn.MultiMarginLoss(margin=margin)
-    print 'Model created.'
+    assert args.model in ['lstm', 'cnn']
+    if args.model == 'lstm':
+        model = LSTM(args)
+    else:
+        model = CNN(args)
+
+    print model
+    print 'Parameters: {}'.format(params(model))
+
+    optimizer = torch.optim.Adam(model.parameters(), args.lr)
+    criterion = nn.MultiMarginLoss(margin=args.margin)
+    if args.cuda:
+        criterion = criterion.cuda()
 
     if args.load:
         if os.path.isfile(args.load):
@@ -73,14 +81,10 @@ def main():
         else:
             print 'No checkpoint found here.'
 
-    if args.cuda:
-        model = model.cuda()
-        criterion = criterion.cuda()
-
     if args.eval:
         test_file = 'askubuntu/test.txt'
-        test_data = preprocessing.read_annotations(test_file, max_neg=-1)
-        test_batches = preprocessing.generate_eval_batches(
+        test_data = dataset.read_annotations(test_file, max_neg=-1)
+        test_batches = batch_utils.generate_eval_batches(
             corpus_ids, test_data, padding_id)
 
         print 'Evaluating on dev set.'
@@ -90,9 +94,9 @@ def main():
         evaluate(model, embedding, test_batches, padding_id)
         return
 
-    for epoch in xrange(args.start_epoch, epochs):
-        train_batches = preprocessing.generate_train_batches(
-            corpus_ids, train_data, batch_size, padding_id)
+    for epoch in xrange(args.start_epoch, args.epochs):
+        train_batches = batch_utils.generate_train_batches(
+            corpus_ids, train_data, args.batch_size, padding_id)
 
         train(model, embedding, optimizer, criterion,
               train_batches, padding_id, epoch)
@@ -120,7 +124,7 @@ def train(model, embedding, optimizer, criterion, batches, padding_id, epoch):
         optimizer.zero_grad()
 
         # title_ids = title x questions
-        # body_ids = body (= 100) x questions
+        # body_ids = body x questions
         # set_ids = pairs x sample (= 22)
         title_ids, body_ids, set_ids = batch
         n_pairs, sample_size = set_ids.shape
@@ -129,12 +133,12 @@ def train(model, embedding, optimizer, criterion, batches, padding_id, epoch):
         hidden = forward(model, embedding,
                          title_ids, body_ids, padding_id)
 
-        # questions = pairs x sample (= 22) x hidden (= 200)
+        # questions = pairs x sample (= 22) x hidden
         questions = hidden[set_ids.ravel()]
         questions = questions.view(n_pairs, sample_size, args.hidden)
 
         # q = pairs x 1 x hidden (= 200)
-        # p = pairs x sample - 1 (= 21) x hidden (= 200)
+        # p = pairs x sample - 1 (= 21) x hidden
         q = questions[:, 0, :].unsqueeze(1)
         p = questions[:, 1:, :]
 
@@ -164,18 +168,19 @@ def train(model, embedding, optimizer, criterion, batches, padding_id, epoch):
 def evaluate(model, embedding, batches, padding_id):
     model.eval()
     results = []
+
     for i, batch in enumerate(batches):
         # title_ids = title x questions (= 21)
-        # body_ids = body (< 100) x questions (= 21)
+        # body_ids = body x questions (= 21)
         # labels = questions - query (= 20)
         title_ids, body_ids, labels = batch
 
-        # hidden = questions (= 21) x hidden (= 200)
+        # hidden = questions (= 21) x hidden
         hidden = forward(model, embedding,
                          title_ids, body_ids, padding_id)
 
         # q = 1 x hidden (= 200)
-        # p = questions - query (= 20) x hidden (= 200)
+        # p = questions - query (= 20) x hidden
         q = hidden[0].unsqueeze(0)
         p = hidden[1:]
 
@@ -200,7 +205,6 @@ def evaluate(model, embedding, batches, padding_id):
 
 def forward(model, embedding, title_ids, body_ids, padding_id):
     embed_size = args.embed
-    hidden_size = args.hidden
 
     assert title_ids.shape[1] == body_ids.shape[1]
     title_len, n_questions = title_ids.shape
@@ -223,41 +227,16 @@ def forward(model, embedding, title_ids, body_ids, padding_id):
         x_t = x_t.cuda()
         x_b = x_b.cuda()
 
-    # h_c_t[0] = 1 x questions x hidden (= 200)
-    # h_c_b[0] = 1 x questions x hidden (= 200)
-    h_c_t = (Variable(torch.zeros(1, n_questions, hidden_size)),
-             Variable(torch.zeros(1, n_questions, hidden_size)))
-    h_c_b = (Variable(torch.zeros(1, n_questions, hidden_size)),
-             Variable(torch.zeros(1, n_questions, hidden_size)))
+    h_t = model(x_t)
+    h_b = model(x_b)
 
-    # h_t = title x questions x hidden (= 200)
-    # h_b = body x questions x hidden (= 200)
-    h_t = Variable(torch.zeros(title_len, n_questions, hidden_size))
-    h_b = Variable(torch.zeros(body_len, n_questions, hidden_size))
-
-    if args.cuda:
-        h_c_t = (h_c_t[0].cuda(), h_c_t[1].cuda())
-        h_c_b = (h_c_b[0].cuda(), h_c_b[1].cuda())
-        h_t = h_t.cuda()
-        h_b = h_b.cuda()
-
-    # h_t = title x questions x hidden (= 200)
-    for j in xrange(title_len):
-        _, h_c_t = model(x_t[j].view(1, n_questions, -1), h_c_t)
-        h_t[j, :, :] = h_c_t[0]
-
-    # h_b = body (= 100) x questions x hidden (= 200)
-    for j in xrange(body_len):
-        _, h_c_b = model(x_b[j].view(1, n_questions, -1), h_c_b)
-        h_b[j, :, :] = h_c_b[0]
-
-    # h_t = title x questions x hidden (= 200)
-    # h_b = body (= 100) x questions x hidden (= 200)
+    # h_t = title x questions x hidden
+    # h_b = body x questions x hidden
     h_t = normalize(h_t, 3)
     h_b = normalize(h_b, 3)
 
-    # h_t = questions x hidden (= 200)
-    # h_b = questions x hidden (= 200)
+    # h_t = questions x hidden
+    # h_b = questions x hidden
     h_t = average(h_t, title_ids, padding_id)
     h_b = average(h_b, body_ids, padding_id)
 
@@ -274,14 +253,14 @@ def normalize(hidden, dim, eps=1e-8):
 
 
 def average(hidden, ids, padding_id, eps=1e-8):
-    # mask = sequence (title or body) x questions x 1
+    # mask = sequence x questions x 1
     mask = Variable(torch.from_numpy(1 * (ids != padding_id))
                     .type(torch.FloatTensor).unsqueeze(2))
 
     if args.cuda:
         mask = mask.cuda()
 
-    # masked_sum = questions x hidden (= 200)
+    # masked_sum = questions x hidden
     masked_sum = torch.sum(mask * hidden, dim=0)
 
     # lengths = questions x 1
@@ -290,11 +269,26 @@ def average(hidden, ids, padding_id, eps=1e-8):
     return masked_sum / (lengths + eps)
 
 
+def params(model):
+    trainable = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in trainable])
+    return params
+
+
 def save(state, is_best, hidden):
-    latest = 'lstm_{}_latest.pth.tar'.format(hidden)
+    directory = 'models'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    latest = '{}_{}_{}_latest.pth.tar'.format(
+        args.model, hidden, int(args.margin * 100))
+    latest = os.path.join(directory, latest)
+
     torch.save(state, latest)
     if is_best:
-        best = 'lstm_{}_best.pth.tar'.format(hidden)
+        best = '{}_{}_{}_best.pth.tar'.format(
+            args.model, hidden, int(args.margin * 100))
+        best = os.path.join(directory, best)
         shutil.copyfile(latest, best)
 
 
