@@ -39,8 +39,6 @@ def main():
     corpus_file = 'askubuntu/text_tokenized.txt.gz'
     dataset = UbuntuDataset(corpus_file)
     corpus = dataset.get_corpus()
-    # corpus = preprocessing.read_corpus(corpus_file)
-    # print 'Corpus processed.'
 
     embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
     embedding = Embedding(args.embed, embedding_file)
