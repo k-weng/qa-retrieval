@@ -286,13 +286,13 @@ def save(state, is_best, hidden):
         os.makedirs(directory)
 
     latest = '{}_{}_{}_latest.pth.tar'.format(
-        args.model, hidden, args.margin * 100)
+        args.model, hidden, int(args.margin * 100))
     latest = os.path.join(directory, latest)
 
     torch.save(state, latest)
     if is_best:
         best = '{}_{}_{}_best.pth.tar'.format(
-            args.model, hidden, args.margin * 100)
+            args.model, hidden, int(args.margin * 100))
         best = os.path.join(directory, best)
         shutil.copyfile(latest, best)
 
