@@ -14,7 +14,8 @@ class CNN(nn.Module):
         self.hidden = args.hidden
         self.embed = args.embed
 
-        conv1d = nn.Conv1d(self.embed, self.hidden, 3, padding=1)
+        kernel = 3
+        conv1d = nn.Conv1d(self.embed, self.hidden, kernel, padding=1)
         self.conv1d = conv1d.cuda() if args.cuda else conv1d
 
     def forward(self, input):

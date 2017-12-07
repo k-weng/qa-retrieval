@@ -4,6 +4,7 @@ import time
 import shutil
 import argparse
 import preprocessing
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -61,13 +62,13 @@ def main():
 
     assert args.model in ['lstm', 'cnn']
     if args.model == 'lstm':
-        print 'Using LSTM model.'
         model = LSTM(args)
     else:
-        print 'Using CNN model.'
         model = CNN(args)
 
     print model
+    print 'Parameters: {}'.format(params(model))
+
     optimizer = torch.optim.Adam(model.parameters(), lr)
     criterion = nn.MultiMarginLoss(margin=margin)
     if args.cuda:
@@ -271,6 +272,12 @@ def average(hidden, ids, padding_id, eps=1e-8):
     lengths = torch.sum(mask, dim=0)
 
     return masked_sum / (lengths + eps)
+
+
+def params(model):
+    trainable = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in trainable])
+    return params
 
 
 def save(state, is_best, hidden):
