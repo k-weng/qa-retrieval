@@ -3,7 +3,7 @@ import sys
 import time
 import shutil
 import argparse
-import preprocessing
+import batch_utils
 import numpy as np
 
 import torch
@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from datasets import UbuntuDataset
 from models import CNN, LSTM, Embedding
 from metrics import Metrics
 
@@ -33,31 +34,27 @@ best_mrr = -1
 def main():
     global args, best_mrr
     args = parser.parse_args()
-
-    embed_size = args.embed
-    # hidden_size = args.hidden
-    batch_size = args.batch_size
-    lr = args.lr
-    epochs = args.epochs
-    margin = args.margin
+    print args
 
     corpus_file = 'askubuntu/text_tokenized.txt.gz'
-    corpus = preprocessing.read_corpus(corpus_file)
-    print 'Corpus processed.'
+    dataset = UbuntuDataset(corpus_file)
+    corpus = dataset.get_corpus()
+    # corpus = preprocessing.read_corpus(corpus_file)
+    # print 'Corpus processed.'
 
     embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
-    embedding = Embedding(embed_size, embedding_file)
+    embedding = Embedding(args.embed, embedding_file)
     print 'Embeddings loaded.'
 
     corpus_ids = embedding.corpus_to_ids(corpus)
     padding_id = embedding.vocab_ids['<padding>']
 
     train_file = 'askubuntu/train_random.txt'
-    train_data = preprocessing.read_annotations(train_file)
+    train_data = dataset.read_annotations(train_file)
 
     dev_file = 'askubuntu/dev.txt'
-    dev_data = preprocessing.read_annotations(dev_file, max_neg=-1)
-    dev_batches = preprocessing.generate_eval_batches(
+    dev_data = dataset.read_annotations(dev_file, max_neg=-1)
+    dev_batches = batch_utils.generate_eval_batches(
         corpus_ids, dev_data, padding_id)
 
     assert args.model in ['lstm', 'cnn']
@@ -69,8 +66,8 @@ def main():
     print model
     print 'Parameters: {}'.format(params(model))
 
-    optimizer = torch.optim.Adam(model.parameters(), lr)
-    criterion = nn.MultiMarginLoss(margin=margin)
+    optimizer = torch.optim.Adam(model.parameters(), args.lr)
+    criterion = nn.MultiMarginLoss(margin=args.margin)
     if args.cuda:
         criterion = criterion.cuda()
 
@@ -88,8 +85,8 @@ def main():
 
     if args.eval:
         test_file = 'askubuntu/test.txt'
-        test_data = preprocessing.read_annotations(test_file, max_neg=-1)
-        test_batches = preprocessing.generate_eval_batches(
+        test_data = dataset.read_annotations(test_file, max_neg=-1)
+        test_batches = batch_utils.generate_eval_batches(
             corpus_ids, test_data, padding_id)
 
         print 'Evaluating on dev set.'
@@ -99,9 +96,9 @@ def main():
         evaluate(model, embedding, test_batches, padding_id)
         return
 
-    for epoch in xrange(args.start_epoch, epochs):
-        train_batches = preprocessing.generate_train_batches(
-            corpus_ids, train_data, batch_size, padding_id)
+    for epoch in xrange(args.start_epoch, args.epochs):
+        train_batches = batch_utils.generate_train_batches(
+            corpus_ids, train_data, args.batch_size, padding_id)
 
         train(model, embedding, optimizer, criterion,
               train_batches, padding_id, epoch)
