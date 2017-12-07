@@ -10,45 +10,40 @@ from meter import AUCMeter
 def bm25_auc(data, dataset):
     meter = AUCMeter()
     for batch in data:
-        query_t, query_b = dataset.get_sequence(batch[0])
-        titles, bodies = dataset.get_sequences(batch[1])
+        q = dataset.retrieve_combined(batch[0], joined=False)[0]
+        p = dataset.retrieve_combined(batch[1], joined=False)
 
-        sequences = [title + body for title, body in zip(titles, bodies)]
-
-        bm25 = summarization.bm25.BM25(sequences)
+        bm25 = summarization.bm25.BM25(p)
         average_idf = sum(
             float(val) for val in bm25.idf.values()) / len(bm25.idf)
 
-        scores = np.array(bm25.get_scores(query_t + query_b, average_idf))
+        scores = np.array(bm25.get_scores(q, average_idf))
 
         scores = torch.DoubleTensor(scores)
         target = torch.DoubleTensor(batch[2])
 
         meter.add(scores, target)
 
-    return meter.value(0.5)
+    return meter.value(0.05)
 
 
 def tfidf_auc(data, dataset):
     meter = AUCMeter()
     vectorizer = TfidfVectorizer()
+    vectorizer.fit(dataset.retrieve_combined())
 
     for batch in data:
-        sequences = dataset.get_joined_sequences(
-            [batch[0]] + batch[1])
+        q = vectorizer.transform(dataset.retrieve_combined(batch[0]))
+        p = vectorizer.transform(dataset.retrieve_combined(batch[1]))
 
-        tfidf_weighted = vectorizer.fit_transform(sequences)
-        tfidf_weighted = torch.DoubleTensor(tfidf_weighted.todense())
-
-        q = tfidf_weighted[0].unsqueeze(0)
-        p = tfidf_weighted[1:]
-
+        q = torch.DoubleTensor(q.todense())
+        p = torch.DoubleTensor(p.todense())
         scores = F.cosine_similarity(q, p, dim=1).cpu()
         target = torch.DoubleTensor(batch[2])
 
         meter.add(scores, target)
 
-    return meter.value(0.5)
+    return meter.value(0.05)
 
 
 def main():

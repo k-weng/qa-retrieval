@@ -12,8 +12,10 @@ class Dataset(object):
                 qid, title, body = line.split('\t')
                 if len(title) == 0:
                     continue
+
                 title = title.strip().split()
                 body = body.strip().split()
+
                 corpus[qid] = (title, body)
 
         print 'Corpus processed.'
@@ -22,28 +24,48 @@ class Dataset(object):
     def get_corpus(self):
         return self.corpus
 
-    def get_sequence(self, id):
-        return self.corpus[id]
+    def retrieve_combined(self, query=None, joined=True):
+        sequences = []
+        if query:
+            if isinstance(query, str):
+                sequences.append(self.retrieve(query, joined, True))
+            else:
+                for id in query:
+                    sequences.append(self.retrieve(id, joined, True))
+        else:
+            for id in self.corpus.keys():
+                sequences.append(self.retrieve(id, joined, True))
 
-    def get_sequences(self, ids):
+        return sequences
+
+    def retrieve_titles_bodies(self, query=None, joined=True):
         titles = []
         bodies = []
-
-        for id in ids:
-            title, body = self.get_sequence(id)
-            titles.append(title)
-            bodies.append(body)
+        if query:
+            if isinstance(query, str):
+                title, body = self.retrieve(query, joined, False)
+                titles.append(title)
+                bodies.append(body)
+            else:
+                for id in query:
+                    title, body = self.retrieve(query, joined, False)
+                    titles.append(title)
+                    bodies.append(body)
+        else:
+            for id in self.corpus.keys():
+                title, body = self.retrieve(query, joined, False)
+                titles.append(title)
+                bodies.append(body)
 
         return titles, bodies
 
-    def get_joined_sequences(self, ids):
-        sequences = []
-
-        for id in ids:
-            title, body = self.get_sequence(id)
-            sequences.append(' '.join(title + body))
-
-        return sequences
+    def retrieve(self, query, joined, together):
+        title, body = self.corpus[query]
+        if together:
+            combined = title + body
+            return ' '.join(combined) if joined else combined
+        else:
+            return ' '.join(title), ' '.join(body) if joined else title, body
 
 
 class AndroidDataset(Dataset):
