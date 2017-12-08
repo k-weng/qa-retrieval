@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+cuda_available = torch.cuda.is_available()
+
 
 class CNN(nn.Module):
     def __init__(self, args):
@@ -16,7 +18,7 @@ class CNN(nn.Module):
 
         kernel = 3
         conv1d = nn.Conv1d(self.embed, self.hidden, kernel, padding=1)
-        self.conv1d = conv1d.cuda() if args.cuda else conv1d
+        self.conv1d = conv1d.cuda() if cuda_available else conv1d
 
     def forward(self, input):
         # input = sequence x questions x embed
@@ -41,10 +43,9 @@ class LSTM(nn.Module):
 
         self.hidden = args.hidden
         self.embed = args.embed
-        self.cuda = args.cuda
 
         lstm = nn.LSTM(self.embed, self.hidden, bidirectional=bidirectional)
-        self.lstm = lstm.cuda() if args.cuda else lstm
+        self.lstm = lstm.cuda() if cuda_available else lstm
 
     def forward(self, input):
         # input = sequence x questions x embed
@@ -58,7 +59,7 @@ class LSTM(nn.Module):
         # output = sequence x questions x hidden
         output = Variable(torch.zeros(seq_len, n_questions, self.hidden))
 
-        if self.cuda:
+        if cuda_available:
             h_c = (h_c[0].cuda(), h_c[1].cuda())
             output = output.cuda()
 

@@ -4,6 +4,9 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from metrics import Metrics
+from meter import AUCMeter
+
+cuda_available = torch.cuda.is_available()
 
 
 def train(args, model, embedding, optimizer, criterion,
@@ -41,7 +44,7 @@ def train(args, model, embedding, optimizer, criterion,
         scores = F.cosine_similarity(q, p, dim=2)
         target = Variable(torch.zeros(n_pairs).type(torch.LongTensor))
 
-        if args.cuda:
+        if cuda_available:
             target = target.cuda()
 
         loss = criterion(scores, target)
@@ -78,7 +81,7 @@ def forward(args, model, embedding, title_ids, body_ids, padding_id):
     x_t = Variable(x_t)
     x_b = Variable(x_b)
 
-    if args.cuda:
+    if cuda_available:
         x_t = x_t.cuda()
         x_b = x_b.cuda()
 
@@ -92,8 +95,8 @@ def forward(args, model, embedding, title_ids, body_ids, padding_id):
 
     # h_t = questions x hidden
     # h_b = questions x hidden
-    h_t = average(args, h_t, title_ids, padding_id)
-    h_b = average(args, h_b, body_ids, padding_id)
+    h_t = average(h_t, title_ids, padding_id)
+    h_b = average(h_b, body_ids, padding_id)
 
     # hidden = questions x hidden
     hidden = (0.5 * (h_t + h_b))
@@ -140,17 +143,49 @@ def evaluate_metrics(args, model, embedding, batches, padding_id):
     return map, mrr, p1, p5
 
 
+def evaluate_auc(args, model, embedding, batches, padding_id):
+    model.eval()
+    meter = AUCMeter()
+
+    for i, batch in enumerate(batches):
+        title_ids, body_ids, labels = batch
+
+        hidden = forward(args, model, embedding,
+                         title_ids, body_ids, padding_id)
+
+        q = hidden[0].unsqueeze(0)
+        p = hidden[1:]
+
+        scores = F.cosine_similarity(q, p, dim=1).cpu().data.numpy()
+        assert len(scores) == len(labels)
+
+        ranking = (-1 * scores).argsort()
+        target = labels[ranking]
+
+        print scores[ranking]
+
+        scores = torch.DoubleTensor(scores[ranking])
+        target = torch.DoubleTensor(target)
+
+        meter.add(scores, target)
+
+    auc_score = meter.value(0.05)
+
+    print 'AUC(0.05)'.format(auc_score)
+    return auc_score
+
+
 def normalize(hidden, dim, eps=1e-8):
     assert dim in [2, 3]
     return hidden / (torch.norm(hidden, 1, dim - 1, keepdim=True) + eps)
 
 
-def average(args, hidden, ids, padding_id, eps=1e-8):
+def average(hidden, ids, padding_id, eps=1e-8):
     # mask = sequence x questions x 1
     mask = Variable(torch.from_numpy(1 * (ids != padding_id))
                     .type(torch.FloatTensor).unsqueeze(2))
 
-    if args.cuda:
+    if cuda_available:
         mask = mask.cuda()
 
     # masked_sum = questions x hidden
@@ -160,4 +195,3 @@ def average(args, hidden, ids, padding_id, eps=1e-8):
     lengths = torch.sum(mask, dim=0)
 
     return masked_sum / (lengths + eps)
-

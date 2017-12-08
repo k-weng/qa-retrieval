@@ -23,7 +23,6 @@ parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--load', type=str, default='')
 parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--eval', action='store_true')
-parser.add_argument('--cuda', action='store_true')
 
 best_mrr = -1
 
@@ -31,6 +30,7 @@ best_mrr = -1
 def main():
     global args, best_mrr
     args = parser.parse_args()
+    cuda_available = torch.cuda.is_available()
     print args
 
     corpus_file = 'askubuntu/text_tokenized.txt.gz'
@@ -65,7 +65,8 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), args.lr)
     criterion = nn.MultiMarginLoss(margin=args.margin)
-    if args.cuda:
+
+    if cuda_available:
         criterion = criterion.cuda()
 
     if args.load:
