@@ -36,14 +36,14 @@ class CNN(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, bidirectional=False):
         super(LSTM, self).__init__()
 
         self.hidden = args.hidden
         self.embed = args.embed
         self.cuda = args.cuda
 
-        lstm = nn.LSTM(self.embed, self.hidden)
+        lstm = nn.LSTM(self.embed, self.hidden, bidirectional=bidirectional)
         self.lstm = lstm.cuda() if args.cuda else lstm
 
     def forward(self, input):

@@ -55,9 +55,11 @@ def main():
     dev_batches = batch_utils.generate_eval_batches(
         corpus_ids, dev_data, padding_id)
 
-    assert args.model in ['lstm', 'cnn']
+    assert args.model in ['lstm', 'cnn', 'bilstm']
     if args.model == 'lstm':
         model = LSTM(args)
+    elif args.model == 'bilstm':
+        model = LSTM(args, bidirectional=True)
     else:
         model = CNN(args)
 
