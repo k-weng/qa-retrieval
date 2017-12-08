@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
     print args
 
-    corpus_file = 'android/corpus.tsv'
+    corpus_file = 'android/corpus.tsv.gz'
     dataset = AndroidDataset(corpus_file)
     corpus = dataset.get_corpus()
 
