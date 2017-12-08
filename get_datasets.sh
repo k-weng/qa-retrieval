@@ -6,4 +6,4 @@ android="https://github.com/jiangfeng1124/Android.git"
 sudo git clone "$unbuntu"
 sudo git clone "$android"
 
-mv Android/ android/
+sudo mv Android/ android/
