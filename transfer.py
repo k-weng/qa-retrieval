@@ -47,7 +47,8 @@ def main():
         corpus_ids, test_data, padding_id)
 
     if os.path.isfile(args.load):
-        model_type = args.load.split('_')[0]
+        model_type = args.load.split('/')[-1].split('_')[0]
+        print model_type
         if model_type == 'lstm':
             model = LSTM(args)
         else:
