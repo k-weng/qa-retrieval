@@ -7,7 +7,7 @@ from utils import train_utils
 
 import torch
 
-from datasets import AndroidDataset
+from data.datasets import AndroidDataset
 from models import CNN, LSTM, Embedding
 
 

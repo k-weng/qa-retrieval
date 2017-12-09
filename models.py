@@ -38,13 +38,13 @@ class CNN(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, args, bidirectional=False):
+    def __init__(self, args):
         super(LSTM, self).__init__()
 
         self.hidden = args.hidden
         self.embed = args.embed
 
-        lstm = nn.LSTM(self.embed, self.hidden, bidirectional=bidirectional)
+        lstm = nn.LSTM(self.embed, self.hidden)
         self.lstm = lstm.cuda() if cuda_available else lstm
 
     def forward(self, input):
@@ -82,18 +82,6 @@ class Embedding:
             vocab_ids[word] = len(vocab_ids)
             words.append(word)
             vectors.append(vector)
-
-        # with gzip.open(file) as f:
-        #     for line in f:
-        #         if line.strip():
-        #             word_vector = line.strip().split()
-        #             word = word_vector[0]
-
-        #             words.append(word)
-        #             vectors.append(
-        #                 np.array([float(x) for x in word_vector[1:]]))
-
-        #             vocab_ids[word] = len(vocab_ids)
 
         self.vocab_ids = vocab_ids
         self.oov_id = vocab_ids[oov]

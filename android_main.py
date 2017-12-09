@@ -1,5 +1,5 @@
 from gensim import summarization
-from datasets import AndroidDataset
+from data.datasets import AndroidDataset
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 import torch

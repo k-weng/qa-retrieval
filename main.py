@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from datasets import UbuntuDataset
+from data.datasets import UbuntuDataset
 from models import CNN, LSTM, Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
@@ -53,11 +53,9 @@ def main():
     dev_batches = batch_utils.generate_eval_batches(
         corpus_ids, dev_data, padding_id)
 
-    assert args.model in ['lstm', 'cnn', 'bilstm']
+    assert args.model in ['lstm', 'cnn']
     if args.model == 'lstm':
         model = LSTM(args)
-    elif args.model == 'bilstm':
-        model = LSTM(args, bidirectional=True)
     else:
         model = CNN(args)
 
