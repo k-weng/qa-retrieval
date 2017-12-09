@@ -12,6 +12,7 @@ from models import CNN, LSTM, Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('load', type=str)
+parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--batch_size', type=int, default=40)
 parser.add_argument('--embed', type=int, default=200)
 parser.add_argument('--hidden', type=int, default=200)
@@ -47,19 +48,13 @@ def main():
         corpus_ids, test_data, padding_id)
 
     if os.path.isfile(args.load):
-        model_type = args.load.split('/')[-1].split('_')[0]
-        print model_type
-        if model_type == 'lstm':
+        if args.model == 'lstm':
             model = LSTM(args)
         else:
             model = CNN(args)
-        print model
 
-        print 'Loading checkpoint.'
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['state_dict'])
-
-        print 'Loaded checkpoint at epoch {}.'.format(checkpoint['epoch'])
     else:
         print 'No checkpoint found here.'
 

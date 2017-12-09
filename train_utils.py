@@ -162,8 +162,6 @@ def evaluate_auc(args, model, embedding, batches, padding_id):
         ranking = (-1 * scores).argsort()
         target = labels[ranking]
 
-        print scores[ranking]
-
         scores = torch.DoubleTensor(scores[ranking])
         target = torch.DoubleTensor(target)
 
@@ -171,7 +169,7 @@ def evaluate_auc(args, model, embedding, batches, padding_id):
 
     auc_score = meter.value(0.05)
 
-    print 'AUC(0.05)'.format(auc_score)
+    print 'AUC(0.05): {}'.format(auc_score)
     return auc_score
 
 
