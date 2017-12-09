@@ -72,23 +72,28 @@ class LSTM(nn.Module):
 
 
 class Embedding:
-    def __init__(self, embed_size, file, oov='<unk>', padding='<padding>'):
+    def __init__(self, embed_size, iter, oov='<unk>', padding='<padding>'):
         vocab_ids = {oov: 0, padding: 1}
         words = [oov, padding]
         vectors = [np.zeros((embed_size, )),
                    np.random.uniform(-0.00005, 0.00005, (embed_size, ))]
 
-        with gzip.open(file) as f:
-            for line in f:
-                if line.strip():
-                    word_vector = line.strip().split()
-                    word = word_vector[0]
+        for word, vector in iter:
+            vocab_ids[word] = len(vocab_ids)
+            words.append(word)
+            vectors.append(vector)
 
-                    words.append(word)
-                    vectors.append(
-                        np.array([float(x) for x in word_vector[1:]]))
+        # with gzip.open(file) as f:
+        #     for line in f:
+        #         if line.strip():
+        #             word_vector = line.strip().split()
+        #             word = word_vector[0]
 
-                    vocab_ids[word] = len(vocab_ids)
+        #             words.append(word)
+        #             vectors.append(
+        #                 np.array([float(x) for x in word_vector[1:]]))
+
+        #             vocab_ids[word] = len(vocab_ids)
 
         self.vocab_ids = vocab_ids
         self.oov_id = vocab_ids[oov]
@@ -114,3 +119,15 @@ class Embedding:
 
     def get_embeddings(self, ids):
         return self.embeddings[torch.LongTensor(ids)]
+
+    @staticmethod
+    def iterator(file):
+        fopen = gzip.open if file.endswith(".gz") else open
+        with fopen(file) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    word_vector = line.split()
+                    word = word_vector[0]
+                    vectors = np.array([float(x) for x in word_vector[1:]])
+                    yield word, vectors

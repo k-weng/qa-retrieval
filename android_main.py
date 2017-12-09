@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 import torch
 import torch.nn.functional as F
-from meter import AUCMeter
+from utils.meter import AUCMeter
 
 
 def bm25_auc(data, dataset):

@@ -2,8 +2,8 @@ import os
 import sys
 import argparse
 import shutil
-import batch_utils
-import train_utils
+from utils import batch_utils
+from utils import train_utils
 
 import torch
 import torch.nn as nn
@@ -38,7 +38,8 @@ def main():
     corpus = dataset.get_corpus()
 
     embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
-    embedding = Embedding(args.embed, embedding_file)
+    embedding_iter = Embedding.iterator(embedding_file)
+    embedding = Embedding(args.embed, embedding_iter)
     print 'Embeddings loaded.'
 
     corpus_ids = embedding.corpus_to_ids(corpus)
