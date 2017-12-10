@@ -8,7 +8,8 @@ from utils import train_utils
 import torch
 
 from data.datasets import AndroidDataset
-from models import CNN, LSTM, Embedding
+from models import CNN, LSTM
+from data.embedding import Embedding
 
 
 parser = argparse.ArgumentParser(sys.argv[0])

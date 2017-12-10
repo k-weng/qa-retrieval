@@ -10,7 +10,8 @@ import torch.nn as nn
 import numpy as np
 
 from data.datasets import UbuntuDataset
-from models import CNN, LSTM, Embedding
+from models import CNN, LSTM
+from data.embedding import Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('--batch_size', type=int, default=40)
