@@ -87,7 +87,7 @@ def main():
             print 'No checkpoint found here.'
 
     if args.eval:
-        test_file = 'askubuntu/test.txt'
+        test_file = 'data/askubuntu/test.txt'
         test_data = dataset.read_annotations(test_file, max_neg=-1)
         test_batches = batch_utils.generate_eval_batches(
             corpus_ids, test_data, padding_id)
@@ -132,13 +132,13 @@ def save(args, state, is_best):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    latest = '{}_{}_{}_.{}.latest.pth.tar'.format(
+    latest = '{}.{}.{}.{}.latest.pth.tar'.format(
         args.model, args.hidden, int(args.margin * 100), args.embedding)
     latest = os.path.join(directory, latest)
 
     torch.save(state, latest)
     if is_best:
-        best = '{}_{}_{}_.{}.best.pth.tar'.format(
+        best = '{}.{}.{}.{}.best.pth.tar'.format(
             args.model, args.hidden, int(args.margin * 100), args.embedding)
         best = os.path.join(directory, best)
         shutil.copyfile(latest, best)

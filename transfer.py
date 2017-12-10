@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('load', type=str)
 parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--batch_size', type=int, default=40)
+parser.add_argument('--embedding', type=str, default='askubuntu')
 parser.add_argument('--embed', type=int, default=200)
 parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--margin', type=float, default=0.2)
@@ -29,7 +30,11 @@ def main():
     dataset = AndroidDataset(corpus_file)
     corpus = dataset.get_corpus()
 
-    embedding_file = 'data/askubuntu/vector/vectors_pruned.200.txt.gz'
+    if args.embedding == 'askubuntu':
+        embedding_file = 'data/askubuntu/vector/vectors_pruned.200.txt.gz'
+    else:
+        embedding_file = 'data/glove/glove.pruned.txt.gz'
+
     embedding_iter = Embedding.iterator(embedding_file)
     embedding = Embedding(args.embed, embedding_iter)
     print 'Embeddings loaded.'
