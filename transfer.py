@@ -57,9 +57,9 @@ def main():
 
     if os.path.isfile(args.load):
         if args.model == 'lstm':
-            model = LSTM(args)
+            model = LSTM(args.embed, args.hidden)
         else:
-            model = CNN(args)
+            model = CNN(args.embed, args.hidden)
 
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['state_dict'])
