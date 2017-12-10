@@ -47,15 +47,15 @@ def tfidf_auc(data, dataset):
 
 
 def main():
-    corpus_file = 'android/corpus.tsv.gz'
+    corpus_file = 'data/android/corpus.tsv.gz'
     dataset = AndroidDataset(corpus_file)
 
-    dev_pos_file = 'android/dev.pos.txt'
-    dev_neg_file = 'android/dev.neg.txt'
+    dev_pos_file = 'data/android/dev.pos.txt'
+    dev_neg_file = 'data/android/dev.neg.txt'
     dev_data = dataset.read_annotations(dev_pos_file, dev_neg_file)
 
-    test_pos_file = 'android/test.pos.txt'
-    test_neg_file = 'android/test.neg.txt'
+    test_pos_file = 'data/android/test.pos.txt'
+    test_neg_file = 'data/android/test.neg.txt'
     test_data = dataset.read_annotations(test_pos_file, test_neg_file)
 
     dev_bm25_score = bm25_auc(dev_data, dataset)

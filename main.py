@@ -15,9 +15,9 @@ from data.embedding import Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('--batch_size', type=int, default=40)
-parser.add_argument('--embed', type=str,
-                    default='askubuntu/vector/vectors_pruned.200.txt.gz')
-parser.add_argument('--embed_size', type=int, default=200)
+parser.add_argument('--embed_file', type=str,
+                    default='data/askubuntu/vector/vectors_pruned.200.txt.gz')
+parser.add_argument('--embed', type=int, default=200)
 parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--margin', type=float, default=0.2)
 parser.add_argument('--lr', type=float, default=0.001)
@@ -36,22 +36,21 @@ def main():
     cuda_available = torch.cuda.is_available()
     print args
 
-    corpus_file = 'askubuntu/text_tokenized.txt.gz'
+    corpus_file = 'data/askubuntu/text_tokenized.txt.gz'
     dataset = UbuntuDataset(corpus_file)
     corpus = dataset.get_corpus()
 
-    embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
-    embedding_iter = Embedding.iterator(embedding_file)
+    embedding_iter = Embedding.iterator(args.embed_file)
     embedding = Embedding(args.embed, embedding_iter)
     print 'Embeddings loaded.'
 
     corpus_ids = embedding.corpus_to_ids(corpus)
     padding_id = embedding.vocab_ids['<padding>']
 
-    train_file = 'askubuntu/train_random.txt'
+    train_file = 'data/askubuntu/train_random.txt'
     train_data = dataset.read_annotations(train_file)
 
-    dev_file = 'askubuntu/dev.txt'
+    dev_file = 'data/askubuntu/dev.txt'
     dev_data = dataset.read_annotations(dev_file, max_neg=-1)
     dev_batches = batch_utils.generate_eval_batches(
         corpus_ids, dev_data, padding_id)

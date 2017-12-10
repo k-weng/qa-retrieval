@@ -25,11 +25,11 @@ def main():
     args = parser.parse_args()
     print args
 
-    corpus_file = 'android/corpus.tsv.gz'
+    corpus_file = 'data/android/corpus.tsv.gz'
     dataset = AndroidDataset(corpus_file)
     corpus = dataset.get_corpus()
 
-    embedding_file = 'askubuntu/vector/vectors_pruned.200.txt.gz'
+    embedding_file = 'data/askubuntu/vector/vectors_pruned.200.txt.gz'
     embedding_iter = Embedding.iterator(embedding_file)
     embedding = Embedding(args.embed, embedding_iter)
     print 'Embeddings loaded.'
@@ -37,12 +37,12 @@ def main():
     corpus_ids = embedding.corpus_to_ids(corpus)
     padding_id = embedding.vocab_ids['<padding>']
 
-    dev_pos_file = 'android/dev.pos.txt'
-    dev_neg_file = 'android/dev.neg.txt'
+    dev_pos_file = 'data/android/dev.pos.txt'
+    dev_neg_file = 'data/android/dev.neg.txt'
     dev_data = dataset.read_annotations(dev_pos_file, dev_neg_file)
 
-    test_pos_file = 'android/test.pos.txt'
-    test_neg_file = 'android/test.neg.txt'
+    test_pos_file = 'data/android/test.pos.txt'
+    test_neg_file = 'data/android/test.neg.txt'
     test_data = dataset.read_annotations(test_pos_file, test_neg_file)
 
     dev_batches = batch_utils.generate_eval_batches(
