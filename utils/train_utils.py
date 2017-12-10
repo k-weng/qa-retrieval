@@ -157,15 +157,16 @@ def evaluate_auc(args, model, embedding, batches, padding_id):
         q = hidden[0].unsqueeze(0)
         p = hidden[1:]
 
-        scores = F.cosine_similarity(q, p, dim=1).cpu().data.numpy()
+        scores = F.cosine_similarity(q, p, dim=1).cpu().data
         assert len(scores) == len(labels)
 
-        ranking = (-1 * scores).argsort()
-        target = labels[ranking]
+        # ranking = (-1 * scores).argsort()
+        # target = labels[ranking]
 
-        scores = torch.DoubleTensor(scores[ranking])
-        target = torch.DoubleTensor(target)
+        # scores = torch.DoubleTensor(scores[ranking])
+        # target = torch.DoubleTensor(labels[ranking])
 
+        target = torch.DoubleTensor(labels)
         meter.add(scores, target)
 
     auc_score = meter.value(0.05)
