@@ -15,7 +15,9 @@ from data.embedding import Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('--batch_size', type=int, default=40)
-parser.add_argument('--embed', type=int, default=200)
+parser.add_argument('--embed', type=str,
+                    default='askubuntu/vector/vectors_pruned.200.txt.gz')
+parser.add_argument('--embed_size', type=int, default=200)
 parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--margin', type=float, default=0.2)
 parser.add_argument('--lr', type=float, default=0.001)
