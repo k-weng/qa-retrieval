@@ -15,8 +15,7 @@ from data.embedding import Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('--batch_size', type=int, default=40)
-parser.add_argument('--embed_file', type=str,
-                    default='data/askubuntu/vector/vectors_pruned.200.txt.gz')
+parser.add_argument('--embedding', type=str, default='askubuntu')
 parser.add_argument('--embed', type=int, default=200)
 parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--margin', type=float, default=0.2)
@@ -40,7 +39,12 @@ def main():
     dataset = UbuntuDataset(corpus_file)
     corpus = dataset.get_corpus()
 
-    embedding_iter = Embedding.iterator(args.embed_file)
+    if args.embedding == 'askubuntu':
+        embedding_file = 'data/askubuntu/vector/vectors_pruned.200.txt.gz'
+    else:
+        embedding_file = 'data/glove/glove.pruned.txt.gz'
+
+    embedding_iter = Embedding.iterator(embedding_file)
     embedding = Embedding(args.embed, embedding_iter)
     print 'Embeddings loaded.'
 
@@ -57,9 +61,9 @@ def main():
 
     assert args.model in ['lstm', 'cnn']
     if args.model == 'lstm':
-        model = LSTM(args)
+        model = LSTM(args.embed, args.hidden)
     else:
-        model = CNN(args)
+        model = CNN(args.embed, args.hidden)
 
     print model
     print 'Parameters: {}'.format(params(model))

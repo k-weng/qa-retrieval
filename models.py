@@ -7,11 +7,11 @@ cuda_available = torch.cuda.is_available()
 
 
 class CNN(nn.Module):
-    def __init__(self, args):
+    def __init__(self, embed, hidden):
         super(CNN, self).__init__()
 
-        self.hidden = args.hidden
-        self.embed = args.embed
+        self.hidden = hidden
+        self.embed = embed
 
         kernel = 3
         conv1d = nn.Conv1d(self.embed, self.hidden, kernel, padding=1)
@@ -35,11 +35,11 @@ class CNN(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, args):
+    def __init__(self, embed, hidden):
         super(LSTM, self).__init__()
 
-        self.hidden = args.hidden
-        self.embed = args.embed
+        self.hidden = hidden
+        self.embed = embed
 
         lstm = nn.LSTM(self.embed, self.hidden)
         self.lstm = lstm.cuda() if cuda_available else lstm
