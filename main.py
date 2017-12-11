@@ -32,7 +32,7 @@ best_auc = -1
 
 
 def main():
-    global args, best_mrr
+    global args, best_mrr, best_auc
     args = parser.parse_args()
     cuda_available = torch.cuda.is_available()
     print args
