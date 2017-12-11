@@ -13,11 +13,13 @@ class Dataset(object):
                 if len(title) == 0:
                     continue
 
-                # title = [w.lower() for w in title.strip().split()]
-                # body = [w.lower() for w in body.strip().split()]
+                title = [w.lower() for w in title.strip().split()]
+                body = [w.lower() for w in body.strip().split()]
 
-                corpus[qid] = (title.strip().split(),
-                               body.strip().split())
+                corpus[qid] = (title, body)
+
+                # corpus[qid] = (title.strip().split(),
+                #                body.strip().split())
 
         print 'Corpus processed.'
         self.corpus = corpus
