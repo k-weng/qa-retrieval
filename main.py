@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from data.datasets import UbuntuDataset
+from data.datasets import UbuntuDataset, AndroidDataset
 from models import CNN, LSTM
 from data.embedding import Embedding
 
@@ -25,6 +25,7 @@ parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--load', type=str, default='')
 parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--eval', action='store_true')
+parser.add_argument('--android', action='store_true')
 
 best_mrr = -1
 
@@ -101,6 +102,19 @@ def main():
             args, model, embedding, test_batches, padding_id)
         return
 
+    if args.android:
+        android_file = 'data/askubuntu/text_tokenized.txt.gz'
+        android_dataset = AndroidDataset(android_file)
+        android_ids = embedding.corpus_to_ids(android_dataset.get_corpus())
+
+        dev_pos_file = 'data/android/dev.pos.txt'
+        dev_neg_file = 'data/android/dev.neg.txt'
+        android_data = android_dataset.read_annotations(
+            dev_pos_file, dev_neg_file)
+
+        android_batches = batch_utils.generate_eval_batches(
+            android_ids, android_data, padding_id)
+
     for epoch in xrange(args.start_epoch, args.epochs):
         train_batches = batch_utils.generate_train_batches(
             corpus_ids, train_data, args.batch_size, padding_id)
@@ -110,6 +124,10 @@ def main():
 
         map, mrr, p1, p5 = train_utils.evaluate_metrics(
             args, model, embedding, dev_batches, padding_id)
+
+        if args.android:
+            train_utils.evaluate_auc(
+                args, model, embedding, android_batches, padding_id)
 
         is_best = mrr > best_mrr
         best_mrr = max(mrr, best_mrr)

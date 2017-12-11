@@ -8,8 +8,7 @@ class Embedding:
     def __init__(self, embed_size, iter, oov='<unk>', padding='<padding>'):
         vocab_ids = {oov: 0, padding: 1}
         words = [oov, padding]
-        vectors = [np.zeros((embed_size, )),
-                   np.random.uniform(-0.00005, 0.00005, (embed_size, ))]
+        vectors = [np.zeros((embed_size, )), np.zeros((embed_size, ))]
 
         for word, vector in iter:
             vocab_ids[word] = len(vocab_ids)
