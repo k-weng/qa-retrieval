@@ -103,7 +103,7 @@ def main():
         return
 
     if args.android:
-        android_file = 'data/askubuntu/text_tokenized.txt.gz'
+        android_file = 'data/android/corpus.tsv.gz'
         android_dataset = AndroidDataset(android_file)
         android_ids = embedding.corpus_to_ids(android_dataset.get_corpus())
 
