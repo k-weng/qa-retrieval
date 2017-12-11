@@ -7,36 +7,27 @@ from utils import train_utils
 
 import torch
 
-from data.datasets import AndroidDataset
+from data.datasets import UbuntuDataset, AndroidDataset
 from models import CNN, LSTM
 from data.embedding import Embedding
 
-def main():
+embedding_file = 'data/glove/glove.pruned.txt.gz'
 
-    corpus_file = 'data/android/corpus.tsv.gz'
-    dataset = AndroidDataset(corpus_file)
-    corpus = dataset.get_corpus()
+embedding_iter = Embedding.iterator(embedding_file)
+embedding = Embedding(args.embed, embedding_iter)
+print 'Embeddings loaded.'
 
-    embedding_file = 'data/glove/glove.pruned.txt.gz'
+android_corpus_file = 'data/android/corpus.tsv.gz'
+android_dataset = AndroidDataset(android_corpus_file)
+android_corpus = android_dataset.get_corpus()
 
-    embedding_iter = Embedding.iterator(embedding_file)
-    embedding = Embedding(args.embed, embedding_iter)
-    print 'Embeddings loaded.'
+ubuntu_corpus_file = 'data/askubuntu/text_tokenized.txt.gz'
+ubuntu_dataset = UbuntuDataset(ubuntu_corpus_file)
+ubuntu_corpus = ubuntu_dataset.get_corpus()
 
-    corpus_ids = embedding.corpus_to_ids(corpus)
-    padding_id = embedding.vocab_ids['<padding>']
-
-    dev_pos_file = 'data/android/dev.pos.txt'
-    dev_neg_file = 'data/android/dev.neg.txt'
-    dev_data = dataset.read_annotations(dev_pos_file, dev_neg_file)
-
-    test_pos_file = 'data/android/test.pos.txt'
-    test_neg_file = 'data/android/test.neg.txt'
-    test_data = dataset.read_annotations(test_pos_file, test_neg_file)
-
-    dev_batches = batch_utils.generate_eval_batches(
-        corpus_ids, dev_data, padding_id)
-    test_batches = batch_utils.generate_eval_batches(
-        corpus_ids, test_data, padding_id)
-
-main()
+batch_size = 20
+batch_count = 10
+batches2, batches2_labels = batch_utils.generate_adv_domain_train_batches(ubuntu_corpus,
+                                                                        android_corpus, 
+                                                                        batch_size, 
+                                                                        batch_count)

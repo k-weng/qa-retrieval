@@ -9,9 +9,7 @@ from meter import AUCMeter
 
 cuda_available = torch.cuda.is_available()
 
-def train_adversarial():
-    
-    
+
 def train(args, model, embedding, optimizer, criterion,
           batches, padding_id, epoch):
     total_loss = 0.0

@@ -1,6 +1,26 @@
 import random
 import numpy as np
 
+def generate_adv_domain_train_batches(corpus_ids, 
+                                    source_corpus, 
+                                    target_corpus,
+                                    batch_size, 
+                                    batch_count, 
+                                    padding_id):
+    source_sentences = source_corpus.values()
+    target_sentences = target_corpus.values()
+    batches = []
+    labels = []
+    for i in range(batch_count):
+        source_batch = random.sample(source_sentences, batch_size)
+        target_batch = random.sample(target_sentences, batch_size)
+        temp = source_batch+target_batch
+        titles, bodies = zip(temp)
+        titles = list(titles)
+        bodies = list(bodies)
+        print(len(titles),type(titles))
+    labels = [[0]*batch_size+[1]*batch_size]*batch_count
+    return batches, labels
 
 def generate_train_batches(corpus_ids, data, batch_size, padding_id):
     perm = range(len(data))

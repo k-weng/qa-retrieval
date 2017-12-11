@@ -30,4 +30,4 @@ def prune(file):
 if __name__ == '__main__':
     file = sys.argv[1]
     print file
-    # prune(file)
+    prune(file)
