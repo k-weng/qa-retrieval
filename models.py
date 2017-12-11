@@ -1,22 +1,21 @@
-import gzip
-import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+cuda_available = torch.cuda.is_available()
+
 
 class CNN(nn.Module):
-    def __init__(self, args):
+    def __init__(self, embed, hidden):
         super(CNN, self).__init__()
 
-        self.hidden = args.hidden
-        self.embed = args.embed
+        self.hidden = hidden
+        self.embed = embed
 
         kernel = 3
         conv1d = nn.Conv1d(self.embed, self.hidden, kernel, padding=1)
-        self.conv1d = conv1d.cuda() if args.cuda else conv1d
+        self.conv1d = conv1d.cuda() if cuda_available else conv1d
 
     def forward(self, input):
         # input = sequence x questions x embed
@@ -36,15 +35,14 @@ class CNN(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, args, bidirectional=False):
+    def __init__(self, embed, hidden):
         super(LSTM, self).__init__()
 
-        self.hidden = args.hidden
-        self.embed = args.embed
-        self.cuda = args.cuda
+        self.hidden = hidden
+        self.embed = embed
 
-        lstm = nn.LSTM(self.embed, self.hidden, bidirectional=bidirectional)
-        self.lstm = lstm.cuda() if args.cuda else lstm
+        lstm = nn.LSTM(self.embed, self.hidden)
+        self.lstm = lstm.cuda() if cuda_available else lstm
 
     def forward(self, input):
         # input = sequence x questions x embed
@@ -58,7 +56,7 @@ class LSTM(nn.Module):
         # output = sequence x questions x hidden
         output = Variable(torch.zeros(seq_len, n_questions, self.hidden))
 
-        if self.cuda:
+        if cuda_available:
             h_c = (h_c[0].cuda(), h_c[1].cuda())
             output = output.cuda()
 
@@ -68,48 +66,3 @@ class LSTM(nn.Module):
             output[j, :, :] = h_c[0]
 
         return output
-
-
-class Embedding:
-    def __init__(self, embed_size, file, oov='<unk>', padding='<padding>'):
-        vocab_ids = {oov: 0, padding: 1}
-        words = [oov, padding]
-        vectors = [np.zeros((embed_size, )),
-                   np.random.uniform(-0.00005, 0.00005, (embed_size, ))]
-
-        with gzip.open(file) as f:
-            for line in f:
-                if line.strip():
-                    word_vector = line.strip().split()
-                    word = word_vector[0]
-
-                    words.append(word)
-                    vectors.append(
-                        np.array([float(x) for x in word_vector[1:]]))
-
-                    vocab_ids[word] = len(vocab_ids)
-
-        self.vocab_ids = vocab_ids
-        self.oov_id = vocab_ids[oov]
-        self.words = words
-        self.embed_size = embed_size
-        self.embeddings = np.array(vectors)
-
-    def words_to_ids(self, words):
-        return np.array(
-            filter(lambda x: x != self.oov_id,
-                   [self.vocab_ids.get(x, self.oov_id) for x in words]))
-
-    def ids_to_words(self, ids):
-        n_words, words = len(self.vocab_ids), self.words
-        return [words[i] if i < n_words else "<err>" for i in ids]
-
-    def corpus_to_ids(self, corpus, max_len=100):
-        corpus_ids = {}
-        for id, (title, body) in corpus.iteritems():
-            corpus_ids[id] = (self.words_to_ids(title),
-                              self.words_to_ids(body)[:max_len])
-        return corpus_ids
-
-    def get_embeddings(self, ids):
-        return self.embeddings[torch.LongTensor(ids)]

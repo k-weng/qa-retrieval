@@ -5,3 +5,6 @@ android
 *.pyc
 *.pem
 models/
+data/android
+data/askubuntu
+data/glove
