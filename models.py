@@ -66,3 +66,24 @@ class LSTM(nn.Module):
             output[j, :, :] = h_c[0]
 
         return output
+
+
+class FFN(nn.Module):
+    def __init__(self, embed, hidden1, hidden2):
+        super(FFN, self).__init__()
+
+        self.w1 = nn.Linear(embed, hidden1)
+        self.w2 = nn.Linear(hidden1, hidden2)
+        self.out = nn.Linear(hidden2, 2)
+        self.softmax = nn.Softmax()
+
+    def forward(self, input):
+        x = self.w1(input)
+        x = F.relu(x)
+        x = self.w2(x)
+        x = F.relu(x)
+        output = self.out(x)
+        output = self.softmax(output)
+
+        return output
+
