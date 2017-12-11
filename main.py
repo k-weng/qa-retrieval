@@ -28,6 +28,7 @@ parser.add_argument('--eval', action='store_true')
 parser.add_argument('--android', action='store_true')
 
 best_mrr = -1
+best_auc = -1
 
 
 def main():
@@ -80,7 +81,8 @@ def main():
             print 'Loading checkpoint.'
             checkpoint = torch.load(args.load)
             args.start_epoch = checkpoint['epoch']
-            best_mrr = checkpoint['best_mrr']
+            best_mrr = checkpoint.get('best_mrr', -1)
+            best_auc = checkpoint.get('best_auc', -1)
             model.load_state_dict(checkpoint['state_dict'])
 
             print 'Loaded checkpoint at epoch {}.'.format(checkpoint['epoch'])
@@ -125,17 +127,20 @@ def main():
         map, mrr, p1, p5 = train_utils.evaluate_metrics(
             args, model, embedding, dev_batches, padding_id)
 
+        auc = -1
         if args.android:
-            train_utils.evaluate_auc(
+            auc = train_utils.evaluate_auc(
                 args, model, embedding, android_batches, padding_id)
 
-        is_best = mrr > best_mrr
+        is_best = auc > best_auc if args.android else mrr > best_mrr
         best_mrr = max(mrr, best_mrr)
+        best_auc = max(auc, best_auc)
         save(args, {
             'epoch': epoch + 1,
             'arch': 'lstm',
             'state_dict': model.state_dict(),
             'best_mrr': best_mrr,
+            'best_auc': best_auc,
         }, is_best)
 
 
