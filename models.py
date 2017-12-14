@@ -86,4 +86,3 @@ class FFN(nn.Module):
         output = self.softmax(output)
 
         return output
-
