@@ -72,7 +72,7 @@ def main():
 
     optimizer_classifier = torch.optim.Adam(
         model_classifier.parameters(), args.clr)
-    criterion_classifier = train_utils.StableBCELoss()
+    criterion_classifier = nn.BCELoss()
 
     if cuda_available:
         criterion_encoder = criterion_encoder.cuda()

@@ -88,6 +88,6 @@ class FFN(nn.Module):
         x = self.w2(x)
         x = F.relu(x)
         output = self.out(x)
-        output = self.softmax(output)[:, 1]
+        output = self.softmax(output)
 
         return output
