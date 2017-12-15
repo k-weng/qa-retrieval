@@ -102,7 +102,7 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
 
         if cuda_available:
             target = target.cuda()
-            labels = target.cuda()
+            labels = labels.cuda()
 
         loss_encoder = criterion_encoder(scores, target)
         loss_classifier = criterion_classifier(predictions, labels)
