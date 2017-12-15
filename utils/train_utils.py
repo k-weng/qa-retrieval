@@ -124,9 +124,9 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
         optimizer_encoder.step()
         optimizer_classifier.step()
 
-        print ('Epoch: {}/{}, Batch {}/{}, ' +
+        print ('Epoch: {}/{}, {}/{}, ' +
                'Acc: {}, Loss: {}, Avg Loss: {}, ' +
-               'Avg Encoder Loss: {}, Av Classifier Loss: {}').format(
+               'Avg Encoder Loss: {}, Avg Classifier Loss: {}').format(
             epoch + 1, args.epochs, i + 1, len(batches),
             accuracy_classifier, loss_val, total_loss / (i + 1),
             total_encoder_loss / (i + 1), total_classifier_loss / (i + 1))
