@@ -66,7 +66,7 @@ def train(args, model, embedding, optimizer, criterion,
 def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
                             optimizer_encoder, optimizer_classifier,
                             criterion_encoder, criterion_classifier,
-                            batches, padding_id, epoch, llambda):
+                            batches, padding_id, epoch, lmbda):
     total_loss = 0.0
     total_encoder_loss = 0.0
     total_classifier_loss = 0.0
@@ -109,7 +109,7 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
         loss_encoder = criterion_encoder(scores, target)
         loss_classifier = criterion_classifier(predictions, labels)
 
-        loss = loss_encoder - llambda * loss_classifier
+        loss = loss_encoder - lmbda * loss_classifier
         loss_val = loss.cpu().data.numpy()[0]
         total_loss += loss_val
         total_encoder_loss += loss_encoder.cpu().data.numpy()[0]
@@ -255,13 +255,3 @@ def average(hidden, ids, padding_id, eps=1e-8):
     lengths = torch.sum(mask, dim=0)
 
     return masked_sum / (lengths + eps)
-
-
-class StableBCELoss(nn.modules.Module):
-    def __init__(self):
-        super(StableBCELoss, self).__init__()
-
-    def forward(self, input, target):
-        neg_abs = - input.abs()
-        loss = input.clamp(min=0) - input * target + (1 + neg_abs.exp()).log()
-        return loss.mean()

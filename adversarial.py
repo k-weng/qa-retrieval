@@ -1,11 +1,9 @@
-import os
 import sys
 import argparse
 from utils import batch_utils, train_utils
 
 import torch
 import torch.nn as nn
-import numpy as np
 
 from data.datasets import UbuntuDataset, AndroidDataset
 from models import LSTM, FFN
@@ -14,14 +12,14 @@ from data.embedding import Embedding
 parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--embed', type=int, default=300)
-parser.add_argument('--batch_size', type=int, default=20)
+parser.add_argument('--batch_size', type=int, default=40)
 parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--margin', type=float, default=0.2)
 parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--elr', type=float, default=0.001)
 parser.add_argument('--clr', type=float, default=-0.001)
-parser.add_argument('--llambda', type=float, default=0.5)
+parser.add_argument('--lmbda', type=float, default=1e-5)
 
 
 def main():
@@ -92,11 +90,10 @@ def main():
             optimizer_encoder, optimizer_classifier,
             criterion_encoder, criterion_classifier,
             zip(encoder_train_batches, classifier_train_batches),
-            padding_id, epoch, args.llambda)
+            padding_id, epoch, args.lmbda)
 
         train_utils.evaluate_auc(
             args, model_encoder, embedding, android_batches, padding_id)
-        break
 
 
 if __name__ == '__main__':
