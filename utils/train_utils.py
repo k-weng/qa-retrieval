@@ -100,7 +100,7 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
             classifier_title_ids, classifier_body_ids, padding_id)
         predictions = model_classifier(hidden_classifier)
         labels = Variable(
-            torch.from_numpy(labels).type(torch.FloatTensor))
+            torch.from_numpy(labels).type(torch.LongTensor))
 
         if cuda_available:
             target = target.cuda()
