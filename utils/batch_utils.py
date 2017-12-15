@@ -10,6 +10,7 @@ def generate_classifier_train_batches(
     target_ids = target_corpus_ids.values()
     batches = []
     labels = []
+    # per_batch = batch_size / 2
     for i in range(n_batches):
         source_batch = random.sample(source_ids, batch_size)
         target_batch = random.sample(target_ids, batch_size)
@@ -17,8 +18,8 @@ def generate_classifier_train_batches(
         titles = list(titles)
         bodies = list(bodies)
         titles, bodies = create_batch(titles, bodies, padding_id)
-        labels = [0] * batch_size + [1] * batch_size
-        batches.append((titles, bodies, np.array(labels)))
+        labels = np.array([0] * batch_size + [1] * batch_size)
+        batches.append((titles, bodies, labels))
     return batches
 
 

@@ -102,6 +102,12 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
         labels = Variable(
             torch.from_numpy(labels).type(torch.LongTensor))
 
+        _, classes = torch.max(predictions.cpu().data, 1)
+        total = len(labels)
+        correct = (classes == labels.data).sum()
+        accuracy_classifier = 100 * correct / float(total)
+        print accuracy
+
         if cuda_available:
             target = target.cuda()
             labels = labels.cuda()
@@ -120,15 +126,14 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
         optimizer_classifier.step()
 
         print ('Epoch: {}/{}, Batch {}/{}, ' +
-               'Loss: {}, Average Loss: {}, ' +
-               'Average Encoder Loss: {}, ' +
-               'Average Classifier Loss: {}').format(
+               'Acc: {}, Loss: {}, Avg Loss: {}, ' +
+               'Avg Encoder Loss: {}, Av Classifier Loss: {}').format(
             epoch + 1, args.epochs, i + 1, len(batches),
-            loss_val, total_loss / (i + 1),
+            accuracy_classifier, loss_val, total_loss / (i + 1),
             total_encoder_loss / (i + 1), total_classifier_loss / (i + 1))
 
 
-def forward(args, model, embedding, title_ids, body_ids, padding_id):
+def forward(args, encoder, embedding, title_ids, body_ids, padding_id):
     embed_size = args.embed
 
     assert title_ids.shape[1] == body_ids.shape[1]
@@ -152,8 +157,8 @@ def forward(args, model, embedding, title_ids, body_ids, padding_id):
         x_t = x_t.cuda()
         x_b = x_b.cuda()
 
-    h_t = model(x_t)
-    h_b = model(x_b)
+    h_t = encoder(x_t)
+    h_b = encoder(x_b)
 
     # h_t = title x questions x hidden
     # h_b = body x questions x hidden

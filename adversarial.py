@@ -19,7 +19,7 @@ parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--elr', type=float, default=0.001)
 parser.add_argument('--clr', type=float, default=-0.001)
-parser.add_argument('--lmbda', type=float, default=1e-5)
+parser.add_argument('--lmbda', type=float, default=1e-4)
 
 
 def main():
@@ -65,11 +65,11 @@ def main():
     print model_classifier
 
     optimizer_encoder = torch.optim.Adam(
-        model_encoder.parameters(), args.elr)
+        model_encoder.parameters(), lr=args.elr)
     criterion_encoder = nn.MultiMarginLoss(margin=args.margin)
 
     optimizer_classifier = torch.optim.Adam(
-        model_classifier.parameters(), args.clr)
+        model_classifier.parameters(), lr=args.clr)
     criterion_classifier = nn.CrossEntropyLoss()
 
     if cuda_available:
