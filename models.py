@@ -75,12 +75,12 @@ class FFN(nn.Module):
         w1 = nn.Linear(input, hidden1)
         w2 = nn.Linear(hidden1, hidden2)
         out = nn.Linear(hidden2, 2)
-        softmax = nn.Softmax(dim=1)
+        # softmax = nn.Softmax(dim=1)
 
         self.w1 = w1.cuda() if cuda_available else w1
         self.w2 = w2.cuda() if cuda_available else w2
         self.out = out.cuda() if cuda_available else out
-        self.softmax = softmax.cuda() if cuda_available else softmax
+        # self.softmax = softmax.cuda() if cuda_available else softmax
 
     def forward(self, input):
         x = self.w1(input)
@@ -88,6 +88,6 @@ class FFN(nn.Module):
         x = self.w2(x)
         x = F.relu(x)
         output = self.out(x)
-        output = self.softmax(output)
+        # output = self.softmax(output)
 
         return output
