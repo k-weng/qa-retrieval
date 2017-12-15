@@ -18,7 +18,7 @@ parser.add_argument('--margin', type=float, default=0.2)
 parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--elr', type=float, default=0.001)
-parser.add_argument('--clr', type=float, default=-0.01)
+parser.add_argument('--clr', type=float, default=-0.001)
 parser.add_argument('--lmbda', type=float, default=1e-5)
 
 
@@ -69,8 +69,8 @@ def main():
     criterion_encoder = nn.MultiMarginLoss(margin=args.margin)
 
     optimizer_classifier = torch.optim.Adam(
-        model_encoder.parameters(), args.clr)
-    criterion_classifier = nn.BCELoss()
+        model_classifier.parameters(), args.clr)
+    criterion_classifier = nn.CrossEntropyLoss()
 
     if cuda_available:
         criterion_encoder = criterion_encoder.cuda()
