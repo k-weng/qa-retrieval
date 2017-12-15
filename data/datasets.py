@@ -18,9 +18,6 @@ class Dataset(object):
 
                 corpus[qid] = (title, body)
 
-                # corpus[qid] = (title.strip().split(),
-                #                body.strip().split())
-
         print 'Corpus processed.'
         self.corpus = corpus
 

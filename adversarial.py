@@ -1,4 +1,6 @@
+import os
 import sys
+import shutil
 import argparse
 from utils import batch_utils, train_utils
 
@@ -20,10 +22,13 @@ parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--elr', type=float, default=0.001)
 parser.add_argument('--clr', type=float, default=-0.001)
 parser.add_argument('--lmbda', type=float, default=1e-4)
+parser.add_argument('--load', type=str, default='')
+
+best_auc = -1
 
 
 def main():
-    global args, best_mrr, best_auc
+    global args, best_auc
     args = parser.parse_args()
     cuda_available = torch.cuda.is_available()
     print args
@@ -76,6 +81,21 @@ def main():
         criterion_encoder = criterion_encoder.cuda()
         criterion_classifier = criterion_classifier.cuda()
 
+    if args.load:
+        if os.path.isfile(args.load):
+            print 'Loading checkpoint.'
+            checkpoint = torch.load(args.load)
+            args.start_epoch = checkpoint['epoch']
+            best_auc = checkpoint.get('best_auc', -1)
+            model_encoder.load_state_dict(
+                checkpoint['encoder_state_dict'])
+            model_classifier.load_state_dict(
+                checkpoint['classifier_state_dict'])
+
+            print 'Loaded checkpoint at epoch {}.'.format(checkpoint['epoch'])
+        else:
+            print 'No checkpoint found here.'
+
     for epoch in xrange(args.start_epoch, args.epochs):
         encoder_train_batches = batch_utils.generate_train_batches(
             ubuntu_ids, ubuntu_train_data,
@@ -92,8 +112,35 @@ def main():
             zip(encoder_train_batches, classifier_train_batches),
             padding_id, epoch, args.lmbda)
 
-        train_utils.evaluate_auc(
+        auc = train_utils.evaluate_auc(
             args, model_encoder, embedding, android_batches, padding_id)
+
+        is_best = auc > best_auc
+        best_auc = max(auc, best_auc)
+        save(args, {
+            'epoch': epoch + 1,
+            'arch': 'lstm',
+            'encoder_state_dict': model_encoder.state_dict(),
+            'classifier_state_dict': model_classifier.state_dict(),
+            'best_auc': best_auc,
+        }, is_best)
+
+
+def save(args, state, is_best):
+    directory = 'adversarial_models'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    latest = '{}.{}.{}.{}.latest.pth.tar'.format(
+        args.model, args.hidden, int(args.margin * 100), args.lmbda)
+    latest = os.path.join(directory, latest)
+
+    torch.save(state, latest)
+    if is_best:
+        best = '{}.{}.{}.{}.best.pth.tar'.format(
+            args.model, args.hidden, int(args.margin * 100), args.lmbda)
+        best = os.path.join(directory, best)
+        shutil.copyfile(latest, best)
 
 
 if __name__ == '__main__':

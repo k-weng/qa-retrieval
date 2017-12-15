@@ -8,3 +8,4 @@ models/
 data/android
 data/askubuntu
 data/glove
+adversarial_models/
