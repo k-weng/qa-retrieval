@@ -106,7 +106,6 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
         total = len(labels)
         correct = (classes == labels.data).sum()
         accuracy_classifier = 100 * correct / float(total)
-        print accuracy
 
         if cuda_available:
             target = target.cuda()
