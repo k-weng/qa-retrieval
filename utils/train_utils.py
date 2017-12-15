@@ -120,11 +120,6 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
             epoch + 1, args.epochs, i + 1, len(batches), time.time() - start,
             loss_val, total_loss / (i + 1))
 
-        break
-
-
-# def forward_classifier(args, model, embedding, input, padding_id):
-
 
 def forward(args, model, embedding, title_ids, body_ids, padding_id):
     embed_size = args.embed
