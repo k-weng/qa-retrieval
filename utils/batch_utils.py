@@ -1,8 +1,7 @@
 import random
 import numpy as np
 
-def generate_adv_domain_train_batches(corpus_ids, 
-                                    source_corpus, 
+def generate_adv_domain_train_batches(source_corpus, 
                                     target_corpus,
                                     batch_size, 
                                     batch_count, 
@@ -15,12 +14,14 @@ def generate_adv_domain_train_batches(corpus_ids,
         source_batch = random.sample(source_sentences, batch_size)
         target_batch = random.sample(target_sentences, batch_size)
         temp = source_batch+target_batch
-        titles, bodies = zip(temp)
+        titles, bodies = zip(*temp)
         titles = list(titles)
         bodies = list(bodies)
-        print(len(titles),type(titles))
-    labels = [[0]*batch_size+[1]*batch_size]*batch_count
-    return batches, labels
+        print(len(titles), len(bodies))
+        titles, bodies = create_batch(titles, bodies, padding_id)
+        labels = [[0]*batch_size+[1]*batch_size]
+        batches.append((titles,bodies,np.array(labels)))
+    return batches
 
 def generate_train_batches(corpus_ids, data, batch_size, padding_id):
     perm = range(len(data))
