@@ -17,7 +17,8 @@ def generate_classifier_train_batches(
         titles = list(titles)
         bodies = list(bodies)
         titles, bodies = create_batch(titles, bodies, padding_id)
-        labels = [0] * batch_size + [1] * batch_size
+        labels = [[1, 0] for _ in xrange(batch_size)]
+        labels += [[0, 1] for _ in xrange(batch_size)]
         batches.append((titles, bodies, np.array(labels)))
     return batches
 

@@ -1,6 +1,7 @@
 import time
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
@@ -67,11 +68,12 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
                             criterion_encoder, criterion_classifier,
                             batches, padding_id, epoch, llambda):
     total_loss = 0.0
+    total_encoder_loss = 0.0
+    total_classifier_loss = 0.0
     model_encoder.train()
     model_classifier.train()
 
     for i, batch in enumerate(batches):
-        start = time.time()
         optimizer_encoder.zero_grad()
         optimizer_classifier.zero_grad()
 
@@ -110,15 +112,20 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
         loss = loss_encoder - llambda * loss_classifier
         loss_val = loss.cpu().data.numpy()[0]
         total_loss += loss_val
+        total_encoder_loss += loss_encoder.cpu().data.numpy()[0]
+        total_classifier_loss += loss_classifier.cpu().data.numpy()[0]
 
         loss.backward()
         optimizer_encoder.step()
         optimizer_classifier.step()
 
-        print ('Epoch: {}/{}, Batch {}/{}, Time: {}, ' +
-               'Loss: {}, Average Loss: {}').format(
-            epoch + 1, args.epochs, i + 1, len(batches), time.time() - start,
-            loss_val, total_loss / (i + 1))
+        print ('Epoch: {}/{}, Batch {}/{}, ' +
+               'Loss: {}, Average Loss: {}, ' +
+               'Average Encoder Loss: {}, ' +
+               'Average Classifier Loss: {}').format(
+            epoch + 1, args.epochs, i + 1, len(batches),
+            loss_val, total_loss / (i + 1),
+            total_encoder_loss / (i + 1), total_classifier_loss / (i + 1))
 
 
 def forward(args, model, embedding, title_ids, body_ids, padding_id):
@@ -248,3 +255,13 @@ def average(hidden, ids, padding_id, eps=1e-8):
     lengths = torch.sum(mask, dim=0)
 
     return masked_sum / (lengths + eps)
+
+
+class StableBCELoss(nn.modules.Module):
+    def __init__(self):
+        super(StableBCELoss, self).__init__()
+
+    def forward(self, input, target):
+        neg_abs = - input.abs()
+        loss = input.clamp(min=0) - input * target + (1 + neg_abs.exp()).log()
+        return loss.mean()

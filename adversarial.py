@@ -39,13 +39,13 @@ def main():
     android_corpus_file = 'data/android/corpus.tsv.gz'
     android_dataset = AndroidDataset(android_corpus_file)
     android_corpus = android_dataset.get_corpus()
-    android_corpus_ids = embedding.corpus_to_ids(android_corpus)
+    android_ids = embedding.corpus_to_ids(android_corpus)
     print 'Got Android corpus ids.'
 
     ubuntu_corpus_file = 'data/askubuntu/text_tokenized.txt.gz'
     ubuntu_dataset = UbuntuDataset(ubuntu_corpus_file)
     ubuntu_corpus = ubuntu_dataset.get_corpus()
-    ubuntu_corpus_ids = embedding.corpus_to_ids(ubuntu_corpus)
+    ubuntu_ids = embedding.corpus_to_ids(ubuntu_corpus)
     print 'Got AskUbuntu corpus ids.'
 
     padding_id = embedding.vocab_ids['<padding>']
@@ -53,11 +53,13 @@ def main():
     ubuntu_train_file = 'data/askubuntu/train_random.txt'
     ubuntu_train_data = ubuntu_dataset.read_annotations(ubuntu_train_file)
 
-    # batch_count = 10
-    # #batches 2 is list of batch
-    # #each batch is (titles, bodies, labels)
-    # #titles is n x (2*batch_size), where n is padded sequence length
-    # batches2 = batch_utils.generate_adv_domain_train_batches(ubuntu_corpus_ids, android_corpus_ids, batch_size, batch_count, padding_id)
+    dev_pos_file = 'data/android/dev.pos.txt'
+    dev_neg_file = 'data/android/dev.neg.txt'
+    android_data = android_dataset.read_annotations(
+        dev_pos_file, dev_neg_file)
+
+    android_batches = batch_utils.generate_eval_batches(
+        android_ids, android_data, padding_id)
 
     model_encoder = LSTM(embed_size, args.hidden)
     model_classifier = FFN(args.hidden)
@@ -70,7 +72,7 @@ def main():
 
     optimizer_classifier = torch.optim.Adam(
         model_classifier.parameters(), args.clr)
-    criterion_classifier = nn.BCELoss()
+    criterion_classifier = train_utils.StableBCELoss()
 
     if cuda_available:
         criterion_encoder = criterion_encoder.cuda()
@@ -78,11 +80,11 @@ def main():
 
     for epoch in xrange(args.start_epoch, args.epochs):
         encoder_train_batches = batch_utils.generate_train_batches(
-            ubuntu_corpus_ids, ubuntu_train_data,
+            ubuntu_ids, ubuntu_train_data,
             args.batch_size, padding_id)
         classifier_train_batches = \
             batch_utils.generate_classifier_train_batches(
-                ubuntu_corpus_ids, android_corpus_ids, args.batch_size,
+                ubuntu_ids, android_ids, args.batch_size,
                 len(encoder_train_batches), padding_id)
 
         train_utils.train_encoder_classifer(
@@ -91,6 +93,9 @@ def main():
             criterion_encoder, criterion_classifier,
             zip(encoder_train_batches, classifier_train_batches),
             padding_id, epoch, args.llambda)
+
+        train_utils.evaluate_auc(
+            args, model_encoder, embedding, android_batches, padding_id)
         break
 
 
