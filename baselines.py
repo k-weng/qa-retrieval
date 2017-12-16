@@ -39,13 +39,10 @@ def tfidf_auc(data, dataset):
         q = torch.DoubleTensor(q.todense())
         p = torch.DoubleTensor(p.todense())
 
-        print q
-        print p
         scores = F.cosine_similarity(q, p, dim=1).cpu()
         target = torch.DoubleTensor(batch[2])
 
         meter.add(scores, target)
-        break
 
     return meter.value(0.05)
 
