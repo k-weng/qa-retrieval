@@ -23,6 +23,7 @@ parser.add_argument('--elr', type=float, default=0.001)
 parser.add_argument('--clr', type=float, default=-0.001)
 parser.add_argument('--lmbda', type=float, default=1e-4)
 parser.add_argument('--load', type=str, default='')
+parser.add_argument('--eval', action='store_true')
 
 best_auc = -1
 
@@ -58,11 +59,11 @@ def main():
 
     dev_pos_file = 'data/android/dev.pos.txt'
     dev_neg_file = 'data/android/dev.neg.txt'
-    android_data = android_dataset.read_annotations(
+    android_dev_data = android_dataset.read_annotations(
         dev_pos_file, dev_neg_file)
 
-    android_batches = batch_utils.generate_eval_batches(
-        android_ids, android_data, padding_id)
+    android_dev_batches = batch_utils.generate_eval_batches(
+        android_ids, android_dev_data, padding_id)
 
     model_encoder = LSTM(embed_size, args.hidden)
     model_classifier = FFN(args.hidden)
@@ -96,6 +97,26 @@ def main():
         else:
             print 'No checkpoint found here.'
 
+    if args.eval:
+        test_pos_file = 'data/android/test.pos.txt'
+        test_neg_file = 'data/android/test.neg.txt'
+        android_test_data = android_dataset.read_annotations(
+            test_pos_file, test_neg_file)
+
+        android_test_batches = batch_utils.generate_eval_batches(
+            android_ids, android_test_data, padding_id)
+
+        print 'Evaluating on dev set.'
+        train_utils.evaluate_metrics(
+            args, model_encoder, embedding,
+            android_dev_batches, padding_id)
+
+        print 'Evaluating on test set.'
+        train_utils.evaluate_metrics(
+            args, model_encoder, embedding,
+            android_test_batches, padding_id)
+        return
+
     for epoch in xrange(args.start_epoch, args.epochs):
         encoder_train_batches = batch_utils.generate_train_batches(
             ubuntu_ids, ubuntu_train_data,
@@ -113,7 +134,7 @@ def main():
             padding_id, epoch, args.lmbda)
 
         auc = train_utils.evaluate_auc(
-            args, model_encoder, embedding, android_batches, padding_id)
+            args, model_encoder, embedding, android_dev_batches, padding_id)
 
         is_best = auc > best_auc
         best_auc = max(auc, best_auc)
