@@ -107,12 +107,12 @@ def main():
             android_ids, android_test_data, padding_id)
 
         print 'Evaluating on dev set.'
-        train_utils.evaluate_metrics(
+        train_utils.evaluate_auc(
             args, model_encoder, embedding,
             android_dev_batches, padding_id)
 
         print 'Evaluating on test set.'
-        train_utils.evaluate_metrics(
+        train_utils.evaluate_auc(
             args, model_encoder, embedding,
             android_test_batches, padding_id)
         return
