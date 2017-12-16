@@ -31,7 +31,6 @@ def tfidf_auc(data, dataset):
     meter = AUCMeter()
     vectorizer = TfidfVectorizer()
     vectorizer.fit(dataset.retrieve_combined())
-    print dataset.retrieve_combined()
 
     for batch in data:
         q = vectorizer.transform(dataset.retrieve_combined(batch[0]))

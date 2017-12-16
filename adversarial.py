@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 
 from data.datasets import UbuntuDataset, AndroidDataset
-from models import LSTM, FFN
+from models import LSTM, FFN, CNN
 from data.embedding import Embedding
 
 parser = argparse.ArgumentParser(sys.argv[0])
@@ -65,7 +65,11 @@ def main():
     android_dev_batches = batch_utils.generate_eval_batches(
         android_ids, android_dev_data, padding_id)
 
-    model_encoder = LSTM(embed_size, args.hidden)
+    assert args.model in ['lstm', 'cnn']
+    if args.model == 'lstm':
+        model_encoder = LSTM(embed_size, args.hidden)
+    else:
+        model_encoder = CNN(embed_size, args.hidden)
     model_classifier = FFN(args.hidden)
     print model_encoder
     print model_classifier
