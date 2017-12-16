@@ -31,6 +31,7 @@ def tfidf_auc(data, dataset):
     meter = AUCMeter()
     vectorizer = TfidfVectorizer()
     vectorizer.fit(dataset.retrieve_combined())
+    print dataset.retrieve_combined()
 
     for batch in data:
         q = vectorizer.transform(dataset.retrieve_combined(batch[0]))
@@ -38,10 +39,14 @@ def tfidf_auc(data, dataset):
 
         q = torch.DoubleTensor(q.todense())
         p = torch.DoubleTensor(p.todense())
+
+        print q
+        print p
         scores = F.cosine_similarity(q, p, dim=1).cpu()
         target = torch.DoubleTensor(batch[2])
 
         meter.add(scores, target)
+        break
 
     return meter.value(0.05)
 
@@ -58,13 +63,11 @@ def main():
     test_neg_file = 'data/android/test.neg.txt'
     test_data = dataset.read_annotations(test_pos_file, test_neg_file)
 
-    dev_bm25_score = bm25_auc(dev_data, dataset)
     dev_tfidf_score = tfidf_auc(dev_data, dataset)
-    print 'BM25: {}, TFIDF: {}'.format(dev_bm25_score, dev_tfidf_score)
+    print 'TFIDF: {}'.format(dev_tfidf_score)
 
-    test_bm25_score = bm25_auc(test_data, dataset)
     test_tfidf_score = tfidf_auc(test_data, dataset)
-    print 'BM25: {}, TFIDF: {}'.format(test_bm25_score, test_tfidf_score)
+    print 'TFIDF: {}'.format(test_tfidf_score)
 
 
 if __name__ == '__main__':
