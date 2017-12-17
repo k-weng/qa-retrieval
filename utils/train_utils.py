@@ -1,7 +1,6 @@
 import time
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
@@ -130,6 +129,81 @@ def train_encoder_classifer(args, model_encoder, model_classifier, embedding,
             epoch + 1, args.epochs, i + 1, len(batches),
             accuracy_classifier, loss_val, total_loss / (i + 1),
             total_encoder_loss / (i + 1), total_classifier_loss / (i + 1))
+
+
+def train_adda(args, encoder_src, encoder_tgt, model_discrim, embedding,
+               optimizer_tgt, optimizer_discrim, criterion,
+               batches, padding_id, epoch):
+
+    total_encoder_tgt_loss = 0.0
+    total_discrim_loss = 0.0
+    model_discrim.train()
+    encoder_tgt.train()
+
+    for i, batch in enumerate(batches):
+        optimizer_discrim.zero_grad()
+
+        title_ids, body_ids, labels = batch
+
+        title_ids_src = title_ids[:args.batch_size]
+        body_ids_src = body_ids[:args.batch_size]
+        hidden_src = forward(
+            args, encoder_src, embedding,
+            title_ids_src, body_ids_src, padding_id)
+
+        title_ids_tgt = title_ids[args.batch_size:]
+        body_ids_tgt = body_ids[args.batch_size:]
+        hidden_tgt = forward(
+            args, encoder_tgt, embedding,
+            title_ids_tgt, body_ids_tgt, padding_id)
+
+        hidden = torch.cat((hidden_src, hidden_tgt), 0)
+
+        predictions = model_discrim(hidden.detach())
+        labels = Variable(
+            torch.from_numpy(labels).type(torch.LongTensor))
+
+        if cuda_available:
+            labels = labels.cuda()
+
+        loss_discrim = criterion(predictions, labels)
+        total_discrim_loss += loss_discrim.cpu().data.numpy()[0]
+
+        loss_discrim.backward()
+
+        optimizer_discrim.step()
+
+        predictions_classes = torch.squeeze(predictions.max(1)[1])
+        accuracy = (predictions_classes == labels).float().mean()
+
+        optimizer_discrim.zero_grad()
+        optimizer_tgt.zero_grad()
+
+        hidden_tgt = forward(
+            args, encoder_tgt, embedding,
+            title_ids_tgt, body_ids_tgt, padding_id)
+
+        predictions_tgt = model_discrim(hidden_tgt)
+
+        labels_tgt = Variable(
+            torch.from_numpy(labels[args.batch_size:]).type(torch.LongTensor))
+
+        if cuda_available:
+            labels_tgt = labels_tgt.cuda()
+
+        loss_tgt = criterion(predictions_tgt, labels_tgt)
+        total_encoder_tgt_loss += loss_tgt.cpu().data.numpy()[0]
+
+        loss_tgt.backward()
+
+        optimizer_tgt.step()
+
+        print ('Epoch: {}/{}, {}/{}, ' +
+               'Acc: {}, Avg Discriminator Loss: {}, ' +
+               'Avg Target Loss: {}').format(
+            epoch + 1, args.epochs, i + 1, len(batches),
+            accuracy, total_discrim_loss / (i + 1),
+            total_encoder_tgt_loss / (i + 1))
 
 
 def forward(args, encoder, embedding, title_ids, body_ids, padding_id):
