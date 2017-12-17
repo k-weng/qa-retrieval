@@ -118,18 +118,18 @@ def main():
 
 
 def save(args, state, is_best):
-    directory = 'adversarial_models'
+    directory = 'adda_models'
     if not os.path.exists(directory):
         os.makedirs(directory)
 
     latest = '{}.{}.{}.{}.latest.pth.tar'.format(
-        args.model, args.hidden, int(args.margin * 100), args.lmbda)
+        args.model, args.hidden, int(args.margin * 100))
     latest = os.path.join(directory, latest)
 
     torch.save(state, latest)
     if is_best:
         best = '{}.{}.{}.{}.best.pth.tar'.format(
-            args.model, args.hidden, int(args.margin * 100), args.lmbda)
+            args.model, args.hidden, int(args.margin * 100))
         best = os.path.join(directory, best)
         shutil.copyfile(latest, best)
 
