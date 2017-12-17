@@ -15,13 +15,13 @@ parser = argparse.ArgumentParser(sys.argv[0])
 parser.add_argument('load', type=str)
 parser.add_argument('--model', type=str, default='lstm')
 parser.add_argument('--embed', type=int, default=300)
-parser.add_argument('--batch_size', type=int, default=20)
+parser.add_argument('--batch_size', type=int, default=40)
 parser.add_argument('--hidden', type=int, default=200)
 parser.add_argument('--margin', type=float, default=0.2)
 parser.add_argument('--start_epoch', type=int, default=0)
 parser.add_argument('--epochs', type=int, default=50)
-parser.add_argument('--elr', type=float, default=1e-4)
-parser.add_argument('--dlr', type=float, default=1e-4)
+parser.add_argument('--elr', type=float, default=1e-3)
+parser.add_argument('--dlr', type=float, default=1e-3)
 parser.add_argument('--eval', action='store_true')
 parser.add_argument('--batch_count', type=int, default=318)
 
@@ -76,6 +76,7 @@ def main():
         encoder_src = CNN(embed_size, args.hidden)
         encoder_tgt = CNN(embed_size, args.hidden)
     encoder_src.load_state_dict(checkpoint['state_dict'])
+    encoder_src.eval()
 
     model_discrim = FFN(args.hidden)
 
@@ -87,10 +88,16 @@ def main():
     if cuda_available:
         criterion = criterion.cuda()
 
-    optimizer_tgt = torch.optim.Adam(encoder_src.parameters(),
-                                     lr=args.elr)
+    betas = (0.5, 0.999)
+    weight_decay = 1e-4
+    optimizer_tgt = torch.optim.Adam(encoder_tgt.parameters(),
+                                     lr=args.elr,
+                                     betas=betas,
+                                     weight_decay=weight_decay)
     optimizer_discrim = torch.optim.Adam(model_discrim.parameters(),
-                                         lr=args.dlr)
+                                         lr=args.dlr,
+                                         betas=betas,
+                                         weight_decay=weight_decay)
 
     for epoch in xrange(args.start_epoch, args.epochs):
         train_batches = \
@@ -122,13 +129,13 @@ def save(args, state, is_best):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    latest = '{}.{}.{}.{}.latest.pth.tar'.format(
+    latest = '{}.{}.{}.latest.pth.tar'.format(
         args.model, args.hidden, int(args.margin * 100))
     latest = os.path.join(directory, latest)
 
     torch.save(state, latest)
     if is_best:
-        best = '{}.{}.{}.{}.best.pth.tar'.format(
+        best = '{}.{}.{}.best.pth.tar'.format(
             args.model, args.hidden, int(args.margin * 100))
         best = os.path.join(directory, best)
         shutil.copyfile(latest, best)

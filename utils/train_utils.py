@@ -145,28 +145,29 @@ def train_adda(args, encoder_src, encoder_tgt, model_discrim, embedding,
 
         title_ids, body_ids, labels = batch
 
-        title_ids_src = title_ids[:args.batch_size]
-        body_ids_src = body_ids[:args.batch_size]
+        title_ids_src = title_ids[:, :args.batch_size]
+        body_ids_src = body_ids[:, :args.batch_size]
         hidden_src = forward(
             args, encoder_src, embedding,
             title_ids_src, body_ids_src, padding_id)
 
-        title_ids_tgt = title_ids[args.batch_size:]
-        body_ids_tgt = body_ids[args.batch_size:]
+        title_ids_tgt = title_ids[:, args.batch_size:]
+        body_ids_tgt = body_ids[:, args.batch_size:]
         hidden_tgt = forward(
             args, encoder_tgt, embedding,
             title_ids_tgt, body_ids_tgt, padding_id)
 
-        hidden = torch.cat((hidden_src, hidden_tgt), 0)
-
-        predictions = model_discrim(hidden.detach())
-        labels = Variable(
+        # hidden_all = torch.cat((hidden_src, hidden_tgt), 0)
+        # predictions = model_discrim(hidden_all.detach())
+        preds_src = model_discrim(hidden_src.detach())
+        preds_tgt = model_discrim(hidden_tgt.detach())
+        predictions = torch.cat((preds_src, preds_tgt), 0)
+        labels_all = Variable(
             torch.from_numpy(labels).type(torch.LongTensor))
-
         if cuda_available:
-            labels = labels.cuda()
+            labels_all = labels_all.cuda()
 
-        loss_discrim = criterion(predictions, labels)
+        loss_discrim = criterion(predictions, labels_all)
         total_discrim_loss += loss_discrim.cpu().data.numpy()[0]
 
         loss_discrim.backward()
@@ -174,7 +175,8 @@ def train_adda(args, encoder_src, encoder_tgt, model_discrim, embedding,
         optimizer_discrim.step()
 
         predictions_classes = torch.squeeze(predictions.max(1)[1])
-        accuracy = (predictions_classes == labels).float().mean()
+        accuracy = (predictions_classes == labels_all).float().mean()
+        accuracy = accuracy.cpu().data.numpy()[0]
 
         optimizer_discrim.zero_grad()
         optimizer_tgt.zero_grad()
@@ -186,17 +188,18 @@ def train_adda(args, encoder_src, encoder_tgt, model_discrim, embedding,
         predictions_tgt = model_discrim(hidden_tgt)
 
         labels_tgt = Variable(
-            torch.from_numpy(labels[args.batch_size:]).type(torch.LongTensor))
+            1 - torch.from_numpy(
+                labels[args.batch_size:]).type(torch.LongTensor))
 
         if cuda_available:
             labels_tgt = labels_tgt.cuda()
 
         loss_tgt = criterion(predictions_tgt, labels_tgt)
         total_encoder_tgt_loss += loss_tgt.cpu().data.numpy()[0]
-
         loss_tgt.backward()
 
         optimizer_tgt.step()
+        optimizer_tgt.zero_grad()
 
         print ('Epoch: {}/{}, {}/{}, ' +
                'Acc: {}, Avg Discriminator Loss: {}, ' +
